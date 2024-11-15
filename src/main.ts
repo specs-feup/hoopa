@@ -1,10 +1,6 @@
-import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
-import { foo } from "./foo.js";
+import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
 
-for (const $function of Query.search(FunctionJp)) {
-    console.log($function.name);
-}
+const api = new ExtendedTaskGraphAPI();
+const etg = api.runTaskGraphGenerationFlow();
 
-console.log("Done");
-console.log("Also, foo =", foo());
+const task = etg?.getTaskById("task1");
