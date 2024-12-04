@@ -2,20 +2,22 @@
   "name": "holistic-partop",
   "version": "1.0.0",
   "author": "tiagolascasas",
-  "description": "An automatic, single-pass algorithm to partitioning and optimizing a C/C++ application on a CPU-FPGA system ",
+  "description": "An automatic, single-pass algorithm for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint .",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "bench:apps": "clava dist/test/benchmark-testing/TestApps.js"
   },
   "dependencies": {
     "@specs-feup/clava": "^3.0.1",
     "@specs-feup/lara": "^3.0.2",
+    "clava-code-transforms": "^1.0.0",
+    "clava-lite-benchmarks": "1.0.0",
     "clava-vitis-integration": "^1.0.0",
     "extended-task-graph": "^1.0.0",
-    "clava-code-transforms": "^1.0.0",
     "chalk": "^5.3.0"
   },
   "devDependencies": {
