@@ -8,7 +8,7 @@ import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
 export class HoopaAPI extends AStage {
     constructor(topFunctionName: string, outputDir = "output", appName = "default_app_name") {
         super("API", topFunctionName, outputDir, appName, "Hoopa");
-        this.setLabelColor(chalk.green);
+        this.setLabelColor(chalk.magentaBright);
     }
 
     public run(skipCodeFlow: boolean = true): void {
@@ -22,7 +22,7 @@ export class HoopaAPI extends AStage {
     }
 
     public runWithEtg(etg: TaskGraph): void {
-        console.log("Running Hoopa...");
+        this.log("Running Hoopa...");
     }
 
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {

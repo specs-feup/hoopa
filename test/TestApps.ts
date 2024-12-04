@@ -1,19 +1,19 @@
 import { SuiteSelector } from "clava-lite-benchmarks/SuiteSelector";
-import { runHoopaForBenchmark } from "./BenchmarkRunner.js";
+import { HoopaSuiteRunner } from "./HoopaSuiteRunner.js";
 
+const suite = SuiteSelector.APPS;
+const apps = [
+    // "cluster-scenario",
+    // "disparity",
+    "edgedetect",
+    // "scenarioA",
+    // "scenarioB",
+    // "stresstest",
+    // "trivial"
+];
 const settings = {
-    suite: SuiteSelector.APPS,
-    apps: [
-        // "cluster-scenario",
-        // "disparity",
-        "edgedetect",
-        // "scenarioA",
-        // "scenarioB",
-        // "stresstest",
-        // "trivial"
-    ],
-    disableCaching: true,
-    outputDir: "output/apps",
+    outputDir: "output/apps"
 }
 
-runHoopaForBenchmark(settings);
+const runner = new HoopaSuiteRunner();
+runner.runScriptForSuite(suite, apps, settings, false);
