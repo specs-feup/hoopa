@@ -1,5 +1,6 @@
 import { SuiteSelector } from "clava-lite-benchmarks/SuiteSelector";
 import { HoopaSuiteRunner } from "./HoopaSuiteRunner.js";
+import { HoopaConfig } from "../src/HoopaConfig.js";
 
 const suite = SuiteSelector.APPS;
 const apps = [
@@ -12,8 +13,10 @@ const apps = [
     // "trivial"
 ];
 const settings = {
-    outputDir: "output/apps"
+    outputDir: "output/apps",
+    hoopaConfig: new HoopaConfig()
 }
+settings.hoopaConfig.clusterFunction = "combthreshold";
 
 const runner = new HoopaSuiteRunner();
 runner.runScriptForSuite(suite, apps, settings, false);
