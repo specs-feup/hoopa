@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { LiteBenchmarkLoader } from "clava-lite-benchmarks/LiteBenchmarkLoader";
+import { HoopaAPI } from "../src/HoopaAPI.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function runHoopaForBenchmark(config: Record<string, any>): boolean {
@@ -40,11 +41,14 @@ export function runHoopaForBenchmark(config: Record<string, any>): boolean {
                 log(`Loaded cached app ${app} with top function ${topFunctionName}`);
             }
         }
-        // Create hoopa
 
+        const hoopa = new HoopaAPI(topFunctionName, config.outputDir, app);
+        hoopa.run(!invalidCache);
 
         log("-".repeat(58));
-        Clava.popAst();
+        if (config.apps.length > 1) {
+            Clava.popAst();
+        }
     }
     if (config.apps.length > 1) {
         log(`Finished running Hoopa for ${config.apps.length} apps from benchmark suite ${config.suite.name}`);

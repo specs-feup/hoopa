@@ -1,23 +1,28 @@
 import { AStage } from "extended-task-graph/AStage";
 import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
-import { TransFlowConfig } from "../../extended-task-graph/dist/src/api/CodeTransformationFlow.js";
 import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
+import chalk from "chalk";
+import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
 
-export class Hoopa extends AStage {
-    constructor(stageName: string, topFunctionName: string, outputDir = "output", appName = "default_app_name") {
-        super(stageName, topFunctionName, outputDir, appName, "Hoopa");
+export class HoopaAPI extends AStage {
+    constructor(topFunctionName: string, outputDir = "output", appName = "default_app_name") {
+        super("API", topFunctionName, outputDir, appName, "Hoopa");
+        this.setLabelColor(chalk.green);
     }
 
     public run(skipCodeFlow: boolean = true): void {
-        console.log("Running Hoopa...");
-
         const etg = this.getTaskGraph(skipCodeFlow);
         if (!etg) {
             this.logError("ETG generation failed!");
             return;
         }
         this.log("ETG generated successfully!");
+        return this.runWithEtg(etg);
+    }
+
+    public runWithEtg(etg: TaskGraph): void {
+        console.log("Running Hoopa...");
     }
 
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
