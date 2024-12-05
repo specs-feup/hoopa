@@ -8,6 +8,7 @@ export class XrtCBackend extends Backend {
     }
 
     protected buildBody(wrapperFun: FunctionJp, entrypoint: string): Scope {
+        this.logWarning("XRT C backend not implemented yet, outputting an empty wrapper function");
         const body = ClavaJoinPoints.scope();
         return body;
     }

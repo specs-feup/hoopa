@@ -1,3 +1,4 @@
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import chalk from "chalk";
 import { AStage } from "extended-task-graph/AStage";
