@@ -1,9 +1,15 @@
-import { Call, ExprStmt, FunctionJp, Scope } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
+import chalk from "chalk";
 import { AStage } from "extended-task-graph/AStage";
+import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
 
 export abstract class Backend extends AStage {
+    private backendName: string;
+
     constructor(topFunctionName: string, outputDir: string, appName: string, backendName: string) {
         super(`Backend-${backendName}`, topFunctionName, outputDir, appName, "Hoopa");
+        this.setLabelColor(chalk.magentaBright);
+        this.backendName = backendName.toLowerCase();
     }
 
     public apply(wrapperFun: FunctionJp): boolean {
@@ -17,6 +23,8 @@ export abstract class Backend extends AStage {
         const body = this.buildBody(wrapperFun, entrypoint);
 
         wrapperFun.body.replaceWith(body);
+
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}`);
         return true;
     }
 
@@ -27,16 +35,10 @@ export abstract class Backend extends AStage {
         if (body.children.length != 3) {
             return "<none>";
         }
-        if (body.children[0].code != "// Replace this call with the accelerator boilerplate") {
+        if (!(body.children[0] instanceof WrapperStmt) || !(body.children[1] instanceof ExprStmt) || !(body.children[2] instanceof WrapperStmt)) {
             return "<none>";
         }
-        if (!(body.children[1] instanceof ExprStmt) || body.children[1].children.length != 1) {
-            return "<none>";
-        }
-        if (!(body.children[1].children[0] instanceof Call)) {
-            return "<none>";
-        }
-        if (body.children[2].code != "// Wrapper end") {
+        if (body.children[1].children.length != 1 || !(body.children[1].children[0] instanceof Call)) {
             return "<none>";
         }
         return (body.children[1].children[0] as Call).name;
