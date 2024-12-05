@@ -1,4 +1,4 @@
-import { FunctionJp, Scope, Statement } from "@specs-feup/clava/api/Joinpoints.js";
+import { FileJp, FunctionJp, Scope, Statement } from "@specs-feup/clava/api/Joinpoints.js";
 import { Backend } from "./Backend.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
@@ -13,6 +13,7 @@ export class XrtCxxBackend extends Backend {
         if (debug) {
             this.addDebugInfo(wrapperFun);
         }
+        this.addIncludes(wrapperFun);
 
         const stmts: Statement[] = [
             ...this.generateXrtInit(entrypoint),
@@ -51,6 +52,20 @@ std::ostream &timestamp(std::ostream &os)
         `;
         const timestampStmts = ClavaJoinPoints.stmtLiteral(timestamp);
         wrapperFun.insertBefore(timestampStmts);
+
+        const file = wrapperFun.getAncestor("file") as FileJp;
+        file.addInclude("chrono", true);
+        file.addInclude("iomanip", true);
+        file.addInclude("iostream", true);
+        file.addInclude("thread", true);
+        file.addInclude("cstring", true);
+    }
+
+    private addIncludes(wrapperFun: FunctionJp) {
+        const file = wrapperFun.getAncestor("file") as FileJp;
+        file.addInclude("experimental/xrt_bo.h");
+        file.addInclude("experimental/xrt_device.h");
+        file.addInclude("experimental/xrt_kernel.h");
     }
 
     private generateXrtInit(entrypoint: string): Statement[] {
