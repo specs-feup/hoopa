@@ -2,11 +2,12 @@ import { OffloadingBackend } from "../HoopaConfig.js";
 import { AStage } from "extended-task-graph/AStage";
 import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
 import { RegularTask } from "extended-task-graph/RegularTask";
-import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
 import chalk from "chalk";
 import { Backend } from "./Backend.js";
-import { XrtBackend } from "./XrtBackend.js";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { DefaultBackend } from "./DefaultBackend.js";
+import { XrtCxxBackend } from "./XrtCxxBackend.js";
+import { XrtCBackend } from "./XrtCBackend.js";
 
 export class Offloader extends AStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -29,13 +30,14 @@ export class Offloader extends AStage {
         switch (backend) {
             case OffloadingBackend.OPENCL:
                 {
-
                     this.log("Selected backend is OpenCL");
                     break;
                 }
             case OffloadingBackend.XRT:
                 {
-                    backendGenerator = new XrtBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    backendGenerator = Clava.isCxx() ?
+                        new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
+                        new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
                     this.log("Selected backend is XRT");
                     break;
                 }

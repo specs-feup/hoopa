@@ -2,11 +2,11 @@ import { AStage } from "extended-task-graph/AStage";
 import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
 import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import chalk from "chalk";
 import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
 import { HoopaConfig } from "./HoopaConfig.js";
 import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
+import chalk from "chalk";
 
 export class HoopaAPI extends AStage {
     private config: HoopaConfig;
