@@ -1,5 +1,5 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, ExprStmt, FunctionJp, Program, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import chalk from "chalk";
 import { AStage } from "extended-task-graph/AStage";
 import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
@@ -13,23 +13,37 @@ export abstract class Backend extends AStage {
         this.backendName = backendName.toLowerCase();
     }
 
-    public apply(wrapperFun: FunctionJp): boolean {
+    public apply(wrapperFun: FunctionJp, debug: boolean = false): boolean {
+        this.log(`Applying backend ${this.backendName} to wrapper function ${wrapperFun.name}${debug ? " with debug info" : ""}`);
+
         const entrypoint = this.getEntryPoint(wrapperFun);
         if (entrypoint == "<none>") {
             this.log(`Provided wrapper function ${wrapperFun.name} is not in the right format`);
             return false;
         }
         this.log(`Building the backend code around entrypoint ${entrypoint}`);
+        if (debug) {
+            this.log(`Debug mode enabled - do not run the generated code in production`);
+        }
 
-        const body = this.buildBody(wrapperFun, entrypoint);
-
+        Clava.pushAst(Clava.getProgram());
+        const body = this.buildBody(wrapperFun, entrypoint, debug);
         wrapperFun.body.replaceWith(body);
 
-        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}`);
+        if (debug) {
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}_debug`);
+            this.log(`Debug code generated at ${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}_debug`);
+        }
+        else {
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}`);
+            this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/clustered_${this.backendName}`);
+        }
+        Clava.popAst();
+
         return true;
     }
 
-    protected abstract buildBody(wrapperFun: FunctionJp, entrypoint: string): Scope;
+    protected abstract buildBody(wrapperFun: FunctionJp, entrypoint: string, debug: boolean): Scope;
 
     private getEntryPoint(wrapperFun: FunctionJp): string {
         const body = wrapperFun.body;

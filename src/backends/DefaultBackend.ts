@@ -6,7 +6,7 @@ export class DefaultBackend extends Backend {
         super(topFunctionName, outputDir, appName, "Default");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string): Scope {
+    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, debug: boolean): Scope {
         return wrapperFun.body;
     }
 }

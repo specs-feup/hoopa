@@ -15,7 +15,7 @@ export class Offloader extends AStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public offload(task: RegularTask, backend: OffloadingBackend) {
+    public offload(task: RegularTask, backend: OffloadingBackend, debug: boolean = false): boolean {
         this.log(`Offloading cluster majored by task ${task.getUniqueName()} using ${backend}`);
 
         const extractor = new ClusterExtractor();
@@ -23,7 +23,7 @@ export class Offloader extends AStage {
         const wrapperFun = extractor.extractClusterFromTask(task, filename, "cluster");
         if (wrapperFun == null) {
             this.logError("Cluster extraction failed!");
-            return;
+            return false;
         }
         let backendGenerator: Backend = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
 
@@ -42,6 +42,6 @@ export class Offloader extends AStage {
                     break;
                 }
         }
-        backendGenerator.apply(wrapperFun);
+        return backendGenerator.apply(wrapperFun, debug);
     }
 }

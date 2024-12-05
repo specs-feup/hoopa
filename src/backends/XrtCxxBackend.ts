@@ -7,8 +7,12 @@ export class XrtCxxBackend extends Backend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string): Scope {
+    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, debug: boolean): Scope {
         const wl = ClavaJoinPoints.stmtLiteral("");
+
+        if (debug) {
+            this.addDebugInfo(wrapperFun);
+        }
 
         const stmts: Statement[] = [
             ...this.generateXrtInit(entrypoint),
@@ -30,6 +34,23 @@ export class XrtCxxBackend extends Backend {
 
     private wl(): Statement {
         return ClavaJoinPoints.stmtLiteral("");
+    }
+
+    private addDebugInfo(wrapperFun: FunctionJp) {
+        const timestamp = `
+const auto program_start_time = std::chrono::steady_clock::now();
+
+std::ostream &timestamp(std::ostream &os)
+{
+    auto now = std::chrono::steady_clock::now();
+    double elapsed_seconds = std::chrono::duration<double>(now - program_start_time).count();
+
+    os << "[" << std::setw(8) << std::fixed << std::setprecision(3) << elapsed_seconds << "] ";
+    return os;
+}
+        `;
+        const timestampStmts = ClavaJoinPoints.stmtLiteral(timestamp);
+        wrapperFun.insertBefore(timestampStmts);
     }
 
     private generateXrtInit(entrypoint: string): Statement[] {

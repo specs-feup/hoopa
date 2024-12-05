@@ -40,7 +40,7 @@ export class HoopaAPI extends AStage {
             }
 
             const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-            offloader.offload(task, this.config.backend);
+            offloader.offload(task, this.config.backend, true);
         }
     }
 
