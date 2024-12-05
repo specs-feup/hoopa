@@ -16,12 +16,24 @@ export class Offloader extends AStage {
 
         const extractor = new ClusterExtractor();
         const filename = `cluster_${task.getName()}`;
-        const success = extractor.extractCluster(task, filename);
+        const success = extractor.extractClusterFromTask(task, filename, "cluster");
         if (!success) {
             this.logError("Cluster extraction failed!");
             return;
         }
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_nobackend`);
 
-        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered`);
+        switch (backend) {
+            case OffloadingBackend.OPENCL:
+                {
+                    this.log("Selected backend is OpenCL");
+                    break;
+                }
+            case OffloadingBackend.XRT:
+                {
+                    this.log("Selected backend is XRT");
+                    break;
+                }
+        }
     }
 }
