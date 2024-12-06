@@ -8,7 +8,7 @@ export class HoopaSuiteRunner extends SuiteRunner {
 
     protected runScript(app: string, topFunctionName: string, isCached: boolean, config: Record<string, any>): boolean {
         const hoopa = new HoopaAPI(topFunctionName, config.hoopaConfig, config.outputDir, app);
-        hoopa.run(isCached);
+        hoopa.runFromStart(isCached);
         return true;
     }
 }

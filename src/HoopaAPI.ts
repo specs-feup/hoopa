@@ -3,7 +3,7 @@ import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
 import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
 import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
-import { HoopaConfig } from "./HoopaConfig.js";
+import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig } from "./HoopaConfig.js";
 import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import chalk from "chalk";
@@ -19,19 +19,34 @@ export class HoopaAPI extends AStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public run(skipCodeFlow: boolean = true): void {
+    public runFromStart(skipCodeFlow: boolean = true): void {
+        this.logLine();
+        this.log("Running Hoopa for the current AST");
+
         const etg = this.getTaskGraph(skipCodeFlow);
         if (!etg) {
             this.logError("ETG generation failed!");
             return;
         }
         this.log("ETG generated successfully!");
-        return this.runWithEtg(etg);
+
+        this.run(etg);
+
+        this.log("Finished running Hoopa");
+        this.logLine();
     }
 
     public runWithEtg(etg: TaskGraph): void {
-        this.log("Running Hoopa...");
+        this.logLine();
+        this.log("Running Hoopa for a given ETG");
 
+        this.run(etg);
+
+        this.log("Finished running Hoopa");
+        this.logLine();
+    }
+
+    private run(etg: TaskGraph): void {
         if (this.config.clusterFunction != "<none>") {
             const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
             if (task == null) {
@@ -47,15 +62,11 @@ export class HoopaAPI extends AStage {
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
         if (!skipCodeFlow) {
             this.log("Running code transformation flow...");
-            const transConfig = new TransFlowConfig();
-            transConfig.transformRecipe = [
-                SubsetTransform.ConstantFoldingPropagation
-            ]
-            this.etgApi.runCodeTransformationFlow(transConfig);
+            this.etgApi.runCodeTransformationFlow(DefaultTransFlowConfig);
         }
 
         this.log("Running ETG generation flow...");
-        const etg = this.etgApi.runTaskGraphGenerationFlow();
+        const etg = this.etgApi.runTaskGraphGenerationFlow(DefaultGenFlowConfig);
         return etg;
     }
 }
