@@ -11,21 +11,32 @@ export class XrtCxxBackend extends Backend {
         const wl = ClavaJoinPoints.stmtLiteral("");
 
         if (debug) {
-            this.addDebugInfo(wrapperFun);
+            this.generateDebugHeader(wrapperFun);
         }
         this.addIncludes(wrapperFun);
 
         const stmts: Statement[] = [
+            this.generateDebugInfo(debug, `Setting up XRT kernel ${entrypoint}`),
             ...this.generateXrtInit(entrypoint),
             this.wl(),
+
+            this.generateDebugInfo(debug, "Creating CPU-FPGA buffers"),
             ...this.generateBufferObjects(wrapperFun),
             this.wl(),
-            ...this.generateWriteBufferSync(wrapperFun),
 
+            this.generateDebugInfo(debug, "Copying data into buffers"),
+            ...this.generateWriteBufferSync(wrapperFun),
+            this.wl(),
+
+            this.generateDebugInfo(debug, "Preparing kernel run"),
             ...this.generateKernelCall(wrapperFun),
             this.wl(),
+
+            this.generateDebugInfo(debug, "Starting kernel..."),
             ClavaJoinPoints.stmtLiteral(`kernel_run.wait()`),
             this.wl(),
+
+            this.generateDebugInfo(debug, "Copying data back from the buffers into the host"),
             ...this.generateReadBufferSync(wrapperFun)
         ];
 
@@ -37,7 +48,7 @@ export class XrtCxxBackend extends Backend {
         return ClavaJoinPoints.stmtLiteral("");
     }
 
-    private addDebugInfo(wrapperFun: FunctionJp) {
+    private generateDebugHeader(wrapperFun: FunctionJp) {
         const timestamp = `
 const auto program_start_time = std::chrono::steady_clock::now();
 
@@ -59,6 +70,15 @@ std::ostream &timestamp(std::ostream &os)
         file.addInclude("iostream", true);
         file.addInclude("thread", true);
         file.addInclude("cstring", true);
+    }
+
+    private generateDebugInfo(debug: boolean, msg: string): Statement {
+        if (debug) {
+            return ClavaJoinPoints.stmtLiteral(`std::cout << timestamp << "${msg}" << std::endl;`);
+        }
+        else {
+            return ClavaJoinPoints.stmtLiteral(``);
+        }
     }
 
     private addIncludes(wrapperFun: FunctionJp) {
@@ -116,7 +136,7 @@ std::ostream &timestamp(std::ostream &os)
                 stmts.push(...bufferStmts);
             }
         }
-        return stmts;
+        return stmts.slice(0, stmts.length - 1);
     }
 
     private generateKernelCall(wrapperFun: FunctionJp): Statement[] {
