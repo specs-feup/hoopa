@@ -5,8 +5,7 @@ import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
-import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import Io from "@specs-feup/lara/api/lara/Io.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -67,8 +66,19 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private decorate(etg: TaskGraph): void {
-        const decorator = new VitisDecorator(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        decorator.decorate(etg);
+        const dir = `${this.getOutputDir()}vitis_hls/initial_runs`;
+        const cachedRes = `${this.getOutputDir()}/vitis_hls/initial_runs.json`;
+        const decorator = new VitisDecorator(this.getTopFunctionName(), this.getOutputDir(), this.getAppName(), dir);
+
+        if (Io.isFile(cachedRes)) {
+            decorator.applyCachedDecorations(etg, cachedRes);
+        }
+        else {
+            const aggregate = decorator.decorate(etg);
+            const json = JSON.stringify(aggregate, null, 4);
+
+            Io.writeFile(cachedRes, json);
+        }
     }
 
     private offload(etg: TaskGraph): void {

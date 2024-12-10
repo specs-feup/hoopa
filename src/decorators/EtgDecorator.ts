@@ -2,12 +2,13 @@ import { TaskGraph } from "extended-task-graph/TaskGraph";
 import { AHoopaStage } from "../AHoopaStage.js";
 import { TaskType } from "extended-task-graph/TaskType";
 import { RegularTask } from "extended-task-graph/RegularTask";
+import Io from "@specs-feup/lara/api/lara/Io.js";
 
 export abstract class EtgDecorator extends AHoopaStage {
     protected label: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, label: string) {
-        super(`${label}Decorator`, topFunctionName, outputDir, appName);
+        super(`Decorator-${label}`, topFunctionName, outputDir, appName);
         this.label = label;
     }
 
@@ -15,11 +16,29 @@ export abstract class EtgDecorator extends AHoopaStage {
         return this.label;
     }
 
-    public decorate(etg: TaskGraph): void {
+    public decorate(etg: TaskGraph): [string, unknown][] {
+        console.log(`Decorating ETG with ${this.label} annotations`);
+
+        const aggregate: [string, unknown][] = [];
+
         for (const task of etg.getTasksByType(TaskType.REGULAR)) {
             const annotation = this.getAnnotation(task as RegularTask);
             task.setAnnotation(this.label, annotation);
+            aggregate.push([task.getName(), annotation]);
         }
+        console.log(`Finished decorating ${aggregate.length} tasks with ${this.label} annotations`);
+        return aggregate;
+    }
+
+    public applyCachedDecorations(etg: TaskGraph, filename: string): void {
+        this.log(`Applying cached ${this.label} decorations from ${filename}`);
+
+        const decorations = Io.readJson(filename);
+        for (const [taskName, annotation] of decorations) {
+            const task = etg.getTaskByName(taskName)!;
+            task.setAnnotation(this.label, annotation);
+        }
+        this.log(`Finished decorating ${decorations.length} tasks with ${this.label} annotations`);
     }
 
     protected abstract getAnnotation(task: RegularTask): unknown;

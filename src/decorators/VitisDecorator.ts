@@ -6,8 +6,11 @@ import { VitisHls } from "clava-vitis-integration/VitisHls";
 import { HlsReport } from "clava-vitis-integration/HlsReport";
 
 export class VitisDecorator extends EtgDecorator {
-    constructor(topFunctionName: string, outputDir: string, appName: string) {
+    private subfolder: string;
+
+    constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string) {
         super(topFunctionName, outputDir, appName, "Vitis");
+        this.subfolder = subfolder;
     }
 
     protected getAnnotation(task: RegularTask): unknown {
@@ -30,7 +33,7 @@ export class VitisDecorator extends EtgDecorator {
 
         const vitis = new VitisHls()
             .setConfig(config)
-            .setOutputDir(`${this.getOutputDir()}/hls`);
+            .setOutputDir(`${this.getOutputDir()}/${this.subfolder}`);
         return vitis.synthesize();
     }
 }
