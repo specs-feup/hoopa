@@ -5,6 +5,8 @@ import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;

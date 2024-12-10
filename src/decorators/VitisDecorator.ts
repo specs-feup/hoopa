@@ -28,7 +28,9 @@ export class VitisDecorator extends EtgDecorator {
             .setPlatform(AmdPlatform.ZCU102)
             .setOutputFormat(OutputFormat.VITIS_XO);
 
-        const vitis = new VitisHls().setConfig(config);
+        const vitis = new VitisHls()
+            .setConfig(config)
+            .setOutputDir(`${this.getOutputDir()}/hls`);
         return vitis.synthesize();
     }
 }
