@@ -4,6 +4,8 @@ import { EtgDecorator } from "./EtgDecorator.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { VitisHls } from "clava-vitis-integration/VitisHls";
 import { HlsReport } from "clava-vitis-integration/HlsReport";
+import { DotConverter } from "extended-task-graph/DotConverter";
+import { TaskGraph } from "extended-task-graph/TaskGraph";
 
 export class VitisDecorator extends EtgDecorator {
     private subfolder: string;
@@ -11,6 +13,11 @@ export class VitisDecorator extends EtgDecorator {
     constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string) {
         super(topFunctionName, outputDir, appName, "Vitis");
         this.subfolder = subfolder;
+    }
+
+    public getDotfile(etg: TaskGraph): string {
+        const converter = new VitisDotConverter();
+        return converter.convert(etg);
     }
 
     protected getAnnotation(task: RegularTask): unknown {
@@ -35,5 +42,26 @@ export class VitisDecorator extends EtgDecorator {
             .setConfig(config)
             .setOutputDir(`${this.getOutputDir()}/${this.subfolder}`);
         return vitis.synthesize();
+    }
+}
+
+export class VitisDotConverter extends DotConverter {
+
+    public getLabelOfTask(task: RegularTask): string {
+        const report = task.getAnnotation("Vitis") as HlsReport;
+        if (!report) {
+            return task.getName();
+        }
+
+        const label = `${task.getName()}
+        execTime: ${report.execTimeWorst.value.toPrecision(2)}${report.execTimeWorst.unit}
+        latency: ${report.latencyWorst} cycles
+        maxFreq: ${report.frequencyMaxMHz}MHz
+        %FF: ${report.perFF.toPrecision(2)}%
+        %LUT: ${report.perLUT.toPrecision(2)}%
+        %BRAM: ${report.perBRAM.toPrecision(2)}%
+        %DSP: ${report.perDSP.toPrecision(2)}%
+        `;
+        return label;
     }
 }

@@ -41,5 +41,7 @@ export abstract class EtgDecorator extends AHoopaStage {
         this.log(`Finished decorating ${decorations.length} tasks with ${this.label} annotations`);
     }
 
+    public abstract getDotfile(etg: TaskGraph): string;
+
     protected abstract getAnnotation(task: RegularTask): unknown;
 }

@@ -6,6 +6,7 @@ import { RegularTask } from "extended-task-graph/RegularTask";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
+import { EtgPostprocessor } from "./EtgPostprocessor.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -57,7 +58,8 @@ export class HoopaAPI extends AHoopaStage {
 
     private run(etg: TaskGraph): void {
         this.log("Running ETG decoration")
-        this.decorate(etg);
+        const postProc = new EtgPostprocessor(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        postProc.applyVitisDecoration(etg);
 
         this.log("Running offloading");
         if (this.config.clusterFunction != "<none>") {
@@ -65,21 +67,6 @@ export class HoopaAPI extends AHoopaStage {
         }
     }
 
-    private decorate(etg: TaskGraph): void {
-        const dir = `${this.getOutputDir()}vitis_hls/initial_runs`;
-        const cachedRes = `${this.getOutputDir()}/vitis_hls/initial_runs.json`;
-        const decorator = new VitisDecorator(this.getTopFunctionName(), this.getOutputDir(), this.getAppName(), dir);
-
-        if (Io.isFile(cachedRes)) {
-            decorator.applyCachedDecorations(etg, cachedRes);
-        }
-        else {
-            const aggregate = decorator.decorate(etg);
-            const json = JSON.stringify(aggregate, null, 4);
-
-            Io.writeFile(cachedRes, json);
-        }
-    }
 
     private offload(etg: TaskGraph): void {
         const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
