@@ -4,9 +4,8 @@ import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig } from "./Hoo
 import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { AHoopaStage } from "./AHoopaStage.js";
-import { VitisDecorator } from "./decorators/VitisDecorator.js";
-import Io from "@specs-feup/lara/api/lara/Io.js";
 import { EtgPostprocessor } from "./EtgPostprocessor.js";
+import { SingleHotspotTask } from "./algorithms/SingleHotspotTask.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -61,12 +60,15 @@ export class HoopaAPI extends AHoopaStage {
         const postProc = new EtgPostprocessor(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         postProc.applyVitisDecoration(etg);
 
+        this.log("Running partitioning and optimization algorithm");
+        const algo = new SingleHotspotTask(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        const cluster = algo.run(etg);
+
         this.log("Running offloading");
         if (this.config.clusterFunction != "<none>") {
             this.offload(etg);
         }
     }
-
 
     private offload(etg: TaskGraph): void {
         const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
