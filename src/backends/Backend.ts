@@ -1,15 +1,13 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { Call, ExprStmt, FunctionJp, Program, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
-import chalk from "chalk";
-import { AStage } from "extended-task-graph/AStage";
+import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
+import { AHoopaStage } from "../AHoopaStage.js";
 
-export abstract class Backend extends AStage {
+export abstract class Backend extends AHoopaStage {
     private backendName: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, backendName: string) {
-        super(`Backend-${backendName}`, topFunctionName, outputDir, appName, "Hoopa");
-        this.setLabelColor(chalk.magentaBright);
+        super(`Backend-${backendName}`, topFunctionName, outputDir, appName);
         this.backendName = backendName.toLowerCase();
     }
 

@@ -1,5 +1,4 @@
 import { OffloadingBackend } from "../HoopaConfig.js";
-import { AStage } from "extended-task-graph/AStage";
 import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import chalk from "chalk";
@@ -8,10 +7,11 @@ import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { DefaultBackend } from "./DefaultBackend.js";
 import { XrtCxxBackend } from "./XrtCxxBackend.js";
 import { XrtCBackend } from "./XrtCBackend.js";
+import { AHoopaStage } from "../AHoopaStage.js";
 
-export class Offloader extends AStage {
+export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
-        super("Offloader", topFunctionName, outputDir, appName, "Hoopa");
+        super("Offloader", topFunctionName, outputDir, appName);
         this.setLabelColor(chalk.magentaBright);
     }
 

@@ -1,22 +1,19 @@
-import { AStage } from "extended-task-graph/AStage";
 import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
-import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
 import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig } from "./HoopaConfig.js";
 import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import chalk from "chalk";
+import { AHoopaStage } from "./AHoopaStage.js";
 
-export class HoopaAPI extends AStage {
+export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
     private etgApi: ExtendedTaskGraphAPI;
 
     constructor(topFunctionName: string, config: HoopaConfig, outputDir = "output", appName = "default_app_name") {
-        super("API", topFunctionName, `${outputDir}/${appName}`, appName, "Hoopa");
+        super("API", topFunctionName, `${outputDir}/${appName}`, appName);
         this.config = config;
         this.etgApi = new ExtendedTaskGraphAPI(topFunctionName, outputDir, appName);
-        this.setLabelColor(chalk.magentaBright);
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {
