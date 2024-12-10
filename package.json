@@ -15,7 +15,7 @@
     "@specs-feup/clava": "^3.0.1",
     "@specs-feup/lara": "^3.0.2",
     "clava-code-transforms": "^1.0.0",
-    "clava-lite-benchmarks": "1.0.0",
+    "clava-lite-benchmarks": "^1.0.0",
     "clava-vitis-integration": "^1.0.0",
     "extended-task-graph": "^1.0.0",
     "chalk": "^5.3.0"

@@ -3,8 +3,8 @@ import { TaskGraph } from "extended-task-graph/TaskGraph";
 import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig } from "./HoopaConfig.js";
 import { Offloader } from "./backends/Offloader.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
-import chalk from "chalk";
 import { AHoopaStage } from "./AHoopaStage.js";
+import { VitisDecorator } from "./decorators/VitisDecorator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -43,19 +43,6 @@ export class HoopaAPI extends AHoopaStage {
         this.logLine();
     }
 
-    private run(etg: TaskGraph): void {
-        if (this.config.clusterFunction != "<none>") {
-            const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
-            if (task == null) {
-                this.logError(`Task ${this.config.clusterFunction} not found in the ETG!`);
-                return;
-            }
-
-            const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-            offloader.offload(task, this.config.backend, true);
-        }
-    }
-
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
         if (!skipCodeFlow) {
             this.log("Running code transformation flow...");
@@ -65,5 +52,31 @@ export class HoopaAPI extends AHoopaStage {
         this.log("Running ETG generation flow...");
         const etg = this.etgApi.runTaskGraphGenerationFlow(DefaultGenFlowConfig);
         return etg;
+    }
+
+    private run(etg: TaskGraph): void {
+        this.log("Running ETG decoration")
+        this.decorate(etg);
+
+        this.log("Running offloading");
+        if (this.config.clusterFunction != "<none>") {
+            this.offload(etg);
+        }
+    }
+
+    private decorate(etg: TaskGraph): void {
+        const decorator = new VitisDecorator(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        decorator.decorate(etg);
+    }
+
+    private offload(etg: TaskGraph): void {
+        const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
+        if (task == null) {
+            this.logError(`Task ${this.config.clusterFunction} not found in the ETG!`);
+            return;
+        }
+
+        const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        offloader.offload(task, this.config.backend, true);
     }
 }
