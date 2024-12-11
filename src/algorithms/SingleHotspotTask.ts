@@ -1,7 +1,7 @@
 import { TaskGraph } from "extended-task-graph/TaskGraph";
 import { ClusteringAlgorithm } from "./ClusteringAlgorithm.js"
-import { Cluster } from "./Cluster.js";
 import { HlsReport } from "clava-vitis-integration/HlsReport";
+import { Cluster } from "extended-task-graph/Cluster";
 
 export class SingleHotspotTask extends ClusteringAlgorithm {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
