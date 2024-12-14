@@ -1,12 +1,12 @@
-import { OffloadingBackend } from "../HoopaConfig.js";
+import { OffloadingBackend } from "./HoopaConfig.js";
 import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
 import chalk from "chalk";
-import { Backend } from "./Backend.js";
+import { Backend } from "./backends/Backend.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { DefaultBackend } from "./DefaultBackend.js";
-import { XrtCxxBackend } from "./XrtCxxBackend.js";
-import { XrtCBackend } from "./XrtCBackend.js";
-import { AHoopaStage } from "../AHoopaStage.js";
+import { DefaultBackend } from "./backends/DefaultBackend.js";
+import { XrtCxxBackend } from "./backends/XrtCxxBackend.js";
+import { XrtCBackend } from "./backends/XrtCBackend.js";
+import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "extended-task-graph/Cluster";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
