@@ -18,7 +18,7 @@ export class Offloader extends AHoopaStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public offload(cluster: Cluster, backend: OffloadingBackend, folderTag: string, debug: boolean = false): boolean {
+    public offload(cluster: Cluster, backend: OffloadingBackend, folderName: string, debug: boolean = false): boolean {
         if (cluster.getTasks().length == 0) {
             this.logWarning("Cluster is empty! Skipping offloading...");
             return false;
@@ -41,12 +41,12 @@ export class Offloader extends AHoopaStage {
                     const offloader = Clava.isCxx() ?
                         new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    return offloader.apply(wrapperFun, folderTag, false);
+                    return offloader.apply(wrapperFun, folderName, false);
                 }
             case OffloadingBackend.OPENCL:
                 {
                     const offloader = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    return offloader.apply(wrapperFun, folderTag, false);
+                    return offloader.apply(wrapperFun, folderName, false);
                 }
             default:
                 {

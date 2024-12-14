@@ -11,7 +11,7 @@ export abstract class Backend extends AHoopaStage {
         this.backendName = backendName.toLowerCase();
     }
 
-    public apply(wrapperFun: FunctionJp, folderTag: string = "", debug: boolean = false): boolean {
+    public apply(wrapperFun: FunctionJp, folderName: string = "clustered", debug: boolean = false): boolean {
         this.log(`Applying backend ${this.backendName} to wrapper function ${wrapperFun.name}${debug ? " with debug info" : ""}`);
 
         const entrypoint = this.getEntryPoint(wrapperFun);
@@ -29,12 +29,12 @@ export abstract class Backend extends AHoopaStage {
         wrapperFun.body.replaceWith(body);
 
         if (debug) {
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${folderTag}_${this.backendName}_debug`);
-            this.log(`Debug code generated at ${SourceCodeOutput.SRC_PARENT}/clustered_${folderTag}_${this.backendName}_debug`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}_debug`);
+            this.log(`Debug code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}_debug`);
         }
         else {
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/clustered_${folderTag}_${this.backendName}`);
-            this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/clustered_${folderTag}_${this.backendName}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}`);
+            this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}`);
         }
         Clava.popAst();
 

@@ -14,8 +14,8 @@ export enum TaskGraphDecorator {
 }
 
 export enum HoopaAlgorithm {
-    SINGLE_HOTSPOT = "singlehotspot",
-    PREDEFINED_TASKS = "predefinedtasks"
+    SINGLE_HOTSPOT = "alg_single_hotspot",
+    PREDEFINED_TASKS = "alg_predefined_tasks"
 }
 
 export enum OffloadingBackend {
