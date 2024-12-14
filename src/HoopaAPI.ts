@@ -6,6 +6,10 @@ import { AHoopaStage } from "./AHoopaStage.js";
 import { EtgPostprocessor } from "./EtgPostprocessor.js";
 import { SingleHotspotTask } from "./algorithms/SingleHotspotTask.js";
 import { Cluster } from "extended-task-graph/Cluster";
+import { EtgDecorator } from "./decorators/EtgDecorator.js";
+import { TaskGraphOutput } from "extended-task-graph/OutputDirectories";
+import Io from "@specs-feup/lara/api/lara/Io.js";
+import { VitisDecorator } from "./decorators/VitisDecorator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -67,18 +71,40 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
-        const postProc = new EtgPostprocessor(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-
         for (const decorator of decorators) {
             switch (decorator) {
                 case TaskGraphDecorator.VITIS_HLS:
-                    postProc.applyVitisDecoration(etg);
-                    break;
+                    {
+                        const vitisDecorator = new VitisDecorator(
+                            this.getTopFunctionName(),
+                            this.getOutputDir(),
+                            this.getAppName(),
+                            "vitis_hls/initial_runs");
+                        this.applyDecoration(etg, vitisDecorator, "vitis_hls/initial_runs.json");
+                        break;
+                    }
                 default:
                     this.logError(`Unknown decorator: ${decorator}`);
                     break;
             }
         }
+    }
+
+    private applyDecoration(etg: TaskGraph, decorator: EtgDecorator, cachedRes: string): void {
+        const fullCachedRes = `${this.getOutputDir()}/${cachedRes}`;
+        if (Io.isFile(fullCachedRes)) {
+            decorator.applyCachedDecorations(etg, fullCachedRes);
+        }
+        else {
+            const aggregate = decorator.decorate(etg);
+            const json = JSON.stringify(aggregate, null, 4);
+
+            Io.writeFile(fullCachedRes, json);
+        }
+
+        const dot = decorator.getDotfile(etg);
+        const etgSubdir = `${TaskGraphOutput.ETG_PARENT}/decorated`;
+        this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabel().toLowerCase()}.dot`, etgSubdir);
     }
 
     private runHoopaAlgorithm(etg: TaskGraph): Cluster {
