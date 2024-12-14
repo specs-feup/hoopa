@@ -8,6 +8,9 @@ import { XrtCxxBackend } from "./XrtCxxBackend.js";
 import { XrtCBackend } from "./XrtCBackend.js";
 import { AHoopaStage } from "../AHoopaStage.js";
 import { Cluster } from "extended-task-graph/Cluster";
+import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import { RegularTask } from "extended-task-graph/RegularTask";
+import { TaskExtractor } from "extended-task-graph/TaskExtractor";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -15,32 +18,41 @@ export class Offloader extends AHoopaStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public offload(cluster: Cluster, backend: OffloadingBackend, debug: boolean = false): boolean {
-        this.log(`Offloading cluster ${cluster.getName()} using ${backend}`);
-
-        const extractor = new ClusterExtractor();
-        const wrapperFun = extractor.extractCluster(cluster, cluster.getName());
-        if (wrapperFun == null) {
-            this.logError("Cluster extraction failed!");
+    public offload(cluster: Cluster, backend: OffloadingBackend, folderTag: string, debug: boolean = false): boolean {
+        if (cluster.getTasks().length == 0) {
+            this.logWarning("Cluster is empty! Skipping offloading...");
             return false;
         }
-        let backendGenerator: Backend = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+
+        let wrapperFun: FunctionJp;
+        if (cluster.getTasks().length == 1) {
+            const task = cluster.getTasks()[0] as RegularTask
+            const extractor = new TaskExtractor()
+            wrapperFun = extractor.extractTask(task) as FunctionJp;
+        }
+        else {
+            const extractor = new ClusterExtractor();
+            wrapperFun = extractor.extractCluster(cluster) as FunctionJp;
+        }
 
         switch (backend) {
-            case OffloadingBackend.OPENCL:
-                {
-                    this.log("Selected backend is OpenCL");
-                    break;
-                }
             case OffloadingBackend.XRT:
                 {
-                    backendGenerator = Clava.isCxx() ?
+                    const offloader = Clava.isCxx() ?
                         new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    this.log("Selected backend is XRT");
-                    break;
+                    return offloader.apply(wrapperFun, folderTag, false);
+                }
+            case OffloadingBackend.OPENCL:
+                {
+                    const offloader = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    return offloader.apply(wrapperFun, folderTag, false);
+                }
+            default:
+                {
+                    this.logError(`Unknown offloading backend ${backend}`);
+                    return false;
                 }
         }
-        return backendGenerator.apply(wrapperFun, debug);
     }
 }

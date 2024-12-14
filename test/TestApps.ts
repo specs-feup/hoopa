@@ -20,13 +20,13 @@ const settings = {
     hoopaConfig: {
         decorators: [TaskGraphDecorator.VITIS_HLS],
         backends: [OffloadingBackend.XRT],
-        // algorithm: {
-        //     name: HoopaAlgorithm.PREDEFINED_TASKS,
-        //     taskNames: ["convolve2d_rep2", "combthreshold"]
-        // } as PredefinedTasksConfig
         algorithm: {
-            name: HoopaAlgorithm.SINGLE_HOTSPOT
-        } as SingleHotspotTaskConfig
+            name: HoopaAlgorithm.PREDEFINED_TASKS,
+            taskNames: ["convolve2d_rep2", "combthreshold"]
+        } as PredefinedTasksConfig
+        // algorithm: {
+        //     name: HoopaAlgorithm.SINGLE_HOTSPOT
+        // } as SingleHotspotTaskConfig
     } as HoopaConfig
 }
 

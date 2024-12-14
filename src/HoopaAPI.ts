@@ -9,6 +9,7 @@ import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
 import { PredefinedTasks, PredefinedTasksConfig } from "./algorithms/PredefinedTasks.js";
 import { SingleHotspotTask, SingleHotspotTaskConfig } from "./algorithms/SingleHotspotTask.js";
+import { Offloader } from "./backends/Offloader.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -131,6 +132,9 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private offload(etg: TaskGraph, cluster: Cluster): void {
-        console.log(cluster.getInOuts());
+        const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        for (const backend of this.config.backends) {
+            offloader.offload(cluster, backend, this.config.algorithm.name);
+        }
     }
 }
