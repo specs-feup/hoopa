@@ -1,13 +1,14 @@
 import { FileJp, FunctionJp, Scope, Statement } from "@specs-feup/clava/api/Joinpoints.js";
 import { Backend } from "./Backend.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { ClusterInOut } from "extended-task-graph/Cluster";
 
 export class XrtCxxBackend extends Backend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, debug: boolean): Scope {
+    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, inOuts: Map<string, ClusterInOut>, debug: boolean): Scope {
         const wl = ClavaJoinPoints.stmtLiteral("");
 
         if (debug) {
@@ -25,7 +26,7 @@ export class XrtCxxBackend extends Backend {
             this.wl(),
 
             this.generateDebugInfo(debug, "Copying data into buffers"),
-            ...this.generateWriteBufferSync(wrapperFun),
+            ...this.generateWriteBufferSync(wrapperFun, inOuts),
             this.wl(),
 
             this.generateDebugInfo(debug, "Preparing kernel run"),
@@ -37,7 +38,7 @@ export class XrtCxxBackend extends Backend {
             this.wl(),
 
             this.generateDebugInfo(debug, "Copying data back from the buffers into the host"),
-            ...this.generateReadBufferSync(wrapperFun)
+            ...this.generateReadBufferSync(wrapperFun, inOuts)
         ];
 
         const body = ClavaJoinPoints.scope(...stmts);
@@ -120,12 +121,16 @@ std::ostream &timestamp(std::ostream &os)
         return stmts;
     }
 
-    private generateWriteBufferSync(wrapperFun: FunctionJp): Statement[] {
+    private generateWriteBufferSync(wrapperFun: FunctionJp, inOuts: Map<string, ClusterInOut>): Statement[] {
         const stmts: Statement[] = [];
 
         for (const param of wrapperFun.params) {
             if (param.type.isArray) {
                 const name = param.name;
+
+                if (inOuts.has(name) && inOuts.get(name) == ClusterInOut.WRITE) {
+                    continue;
+                }
                 const bufferName = `bo_${name}`;
 
                 const bufferStmts = [
@@ -160,12 +165,16 @@ std::ostream &timestamp(std::ostream &os)
         return stmts;
     }
 
-    private generateReadBufferSync(wrapperFun: FunctionJp): Statement[] {
+    private generateReadBufferSync(wrapperFun: FunctionJp, inOuts: Map<string, ClusterInOut>): Statement[] {
         const stmts: Statement[] = [];
 
         for (const param of wrapperFun.params) {
             if (param.type.isArray) {
                 const name = param.name;
+
+                if (inOuts.has(name) && inOuts.get(name) == ClusterInOut.READ) {
+                    continue;
+                }
                 const bufferName = `bo_${name}`;
 
                 const bufferStmts = [

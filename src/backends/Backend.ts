@@ -2,6 +2,7 @@ import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
 import { AHoopaStage } from "../AHoopaStage.js";
+import { ClusterInOut } from "extended-task-graph/Cluster";
 
 export abstract class Backend extends AHoopaStage {
     private backendName: string;
@@ -11,7 +12,7 @@ export abstract class Backend extends AHoopaStage {
         this.backendName = backendName.toLowerCase();
     }
 
-    public apply(wrapperFun: FunctionJp, folderName: string = "clustered", debug: boolean = false): boolean {
+    public apply(wrapperFun: FunctionJp, inOuts: Map<string, ClusterInOut>, folderName: string = "clustered", debug: boolean = false): boolean {
         this.log(`Applying backend ${this.backendName} to wrapper function ${wrapperFun.name}${debug ? " with debug info" : ""}`);
 
         const entrypoint = this.getEntryPoint(wrapperFun);
@@ -25,7 +26,7 @@ export abstract class Backend extends AHoopaStage {
         }
 
         Clava.pushAst(Clava.getProgram());
-        const body = this.buildBody(wrapperFun, entrypoint, debug);
+        const body = this.buildBody(wrapperFun, entrypoint, inOuts, debug);
         wrapperFun.body.replaceWith(body);
 
         if (debug) {
@@ -41,7 +42,7 @@ export abstract class Backend extends AHoopaStage {
         return true;
     }
 
-    protected abstract buildBody(wrapperFun: FunctionJp, entrypoint: string, debug: boolean): Scope;
+    protected abstract buildBody(wrapperFun: FunctionJp, entrypoint: string, inOuts: Map<string, ClusterInOut>, debug: boolean): Scope;
 
     private getEntryPoint(wrapperFun: FunctionJp): string {
         const body = wrapperFun.body;

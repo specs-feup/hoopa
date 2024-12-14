@@ -67,7 +67,7 @@ export class HoopaAPI extends AHoopaStage {
         const cluster = this.runHoopaAlgorithm(etg);
 
         this.log("Running offloading");
-        this.offload(etg, cluster);
+        this.offload(cluster);
     }
 
     private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
@@ -131,7 +131,7 @@ export class HoopaAPI extends AHoopaStage {
         }
     }
 
-    private offload(etg: TaskGraph, cluster: Cluster): void {
+    private offload(cluster: Cluster): void {
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         for (const backend of this.config.backends) {
             offloader.offload(cluster, backend, this.config.algorithm.name);

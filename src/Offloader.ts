@@ -1,13 +1,12 @@
 import { OffloadingBackend } from "./HoopaConfig.js";
 import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
 import chalk from "chalk";
-import { Backend } from "./backends/Backend.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { DefaultBackend } from "./backends/DefaultBackend.js";
 import { XrtCxxBackend } from "./backends/XrtCxxBackend.js";
 import { XrtCBackend } from "./backends/XrtCBackend.js";
 import { AHoopaStage } from "./AHoopaStage.js";
-import { Cluster } from "extended-task-graph/Cluster";
+import { Cluster, ClusterInOut } from "extended-task-graph/Cluster";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { TaskExtractor } from "extended-task-graph/TaskExtractor";
@@ -34,6 +33,8 @@ export class Offloader extends AHoopaStage {
             const extractor = new ClusterExtractor();
             wrapperFun = extractor.extractCluster(cluster) as FunctionJp;
         }
+        const inOuts = cluster.getInOuts();
+        const inOutsMap = new Map<string, ClusterInOut>(inOuts);
 
         switch (backend) {
             case OffloadingBackend.XRT:
@@ -41,12 +42,12 @@ export class Offloader extends AHoopaStage {
                     const offloader = Clava.isCxx() ?
                         new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    return offloader.apply(wrapperFun, folderName, false);
+                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
                 }
             case OffloadingBackend.OPENCL:
                 {
                     const offloader = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    return offloader.apply(wrapperFun, folderName, false);
+                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
                 }
             default:
                 {
