@@ -1,15 +1,14 @@
 import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
-import { RegularTask } from "extended-task-graph/RegularTask";
+import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
-import { EtgPostprocessor } from "./EtgPostprocessor.js";
-import { SingleHotspotTask } from "./algorithms/SingleHotspotTask.js";
 import { Cluster } from "extended-task-graph/Cluster";
 import { EtgDecorator } from "./decorators/EtgDecorator.js";
 import { TaskGraphOutput } from "extended-task-graph/OutputDirectories";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
+import { PredefinedTasks, PredefinedTasksConfig } from "./algorithms/PredefinedTasks.js";
+import { SingleHotspotTask, SingleHotspotTaskConfig } from "./algorithms/SingleHotspotTask.js";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -108,11 +107,30 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private runHoopaAlgorithm(etg: TaskGraph): Cluster {
+        const topFunctionName = this.getTopFunctionName();
+        const outputDir = this.getOutputDir();
+        const appName = this.getAppName();
 
-        return new Cluster();
+        switch (this.config.algorithm.name) {
+            case HoopaAlgorithm.PREDEFINED_TASKS:
+                {
+                    const config = this.config.algorithm as PredefinedTasksConfig;
+                    const alg = new PredefinedTasks(topFunctionName, outputDir, appName, config);
+                    return alg.run(etg);
+                }
+            case HoopaAlgorithm.SINGLE_HOTSPOT:
+                {
+                    const config = this.config.algorithm as SingleHotspotTaskConfig;
+                    const alg = new SingleHotspotTask(topFunctionName, outputDir, appName, config);
+                    return alg.run(etg);
+                }
+            default:
+                this.logError(`Unknown algorithm: ${this.config.algorithm.name}`);
+                return new Cluster();
+        }
     }
 
     private offload(etg: TaskGraph, cluster: Cluster): void {
-
+        console.log(cluster.getInOuts());
     }
 }

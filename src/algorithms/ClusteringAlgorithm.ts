@@ -13,5 +13,5 @@ export abstract class ClusteringAlgorithm extends AHoopaStage {
 }
 
 export type ClusteringAlgorithmConfig = {
-    algorithm: HoopaAlgorithm
+    name: HoopaAlgorithm
 }
