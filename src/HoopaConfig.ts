@@ -1,10 +1,21 @@
 import { GenFlowConfig } from "extended-task-graph/GenFlowConfig";
 import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
+import { ClusteringAlgorithmConfig } from "./algorithms/ClusteringAlgorithm.js";
 
-export class HoopaConfig {
-    backend: OffloadingBackend = OffloadingBackend.XRT;
-    clusterFunction: string = "<none>";
+export type HoopaConfig = {
+    decorators: TaskGraphDecorator[],
+    backends: OffloadingBackend[],
+    algorithm: ClusteringAlgorithmConfig
+}
+
+export enum TaskGraphDecorator {
+    VITIS_HLS = "VitisHLS"
+}
+
+export enum HoopaAlgorithm {
+    SINGLE_HOTSPOT = "SingleHotspot",
+    PREDEFINED_TASKS = "PredefinedTasks"
 }
 
 export enum OffloadingBackend {

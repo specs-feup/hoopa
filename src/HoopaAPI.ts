@@ -1,11 +1,11 @@
 import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig } from "./HoopaConfig.js";
-import { Offloader } from "./backends/Offloader.js";
+import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { EtgPostprocessor } from "./EtgPostprocessor.js";
 import { SingleHotspotTask } from "./algorithms/SingleHotspotTask.js";
+import { Cluster } from "extended-task-graph/Cluster";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
@@ -57,27 +57,36 @@ export class HoopaAPI extends AHoopaStage {
 
     private run(etg: TaskGraph): void {
         this.log("Running ETG decoration")
-        const postProc = new EtgPostprocessor(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        postProc.applyVitisDecoration(etg);
+        this.decorate(etg, this.config.decorators);
 
         this.log("Running partitioning and optimization algorithm");
-        const algo = new SingleHotspotTask(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        const cluster = algo.run(etg);
+        const cluster = this.runHoopaAlgorithm(etg);
 
         this.log("Running offloading");
-        if (this.config.clusterFunction != "<none>") {
-            this.offload(etg);
+        this.offload(etg, cluster);
+    }
+
+    private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
+        const postProc = new EtgPostprocessor(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+
+        for (const decorator of decorators) {
+            switch (decorator) {
+                case TaskGraphDecorator.VITIS_HLS:
+                    postProc.applyVitisDecoration(etg);
+                    break;
+                default:
+                    this.logError(`Unknown decorator: ${decorator}`);
+                    break;
+            }
         }
     }
 
-    private offload(etg: TaskGraph): void {
-        const task = etg.getTaskByName(this.config.clusterFunction) as RegularTask;
-        if (task == null) {
-            this.logError(`Task ${this.config.clusterFunction} not found in the ETG!`);
-            return;
-        }
+    private runHoopaAlgorithm(etg: TaskGraph): Cluster {
 
-        const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        offloader.offload(task, this.config.backend, true);
+        return new Cluster();
+    }
+
+    private offload(etg: TaskGraph, cluster: Cluster): void {
+
     }
 }

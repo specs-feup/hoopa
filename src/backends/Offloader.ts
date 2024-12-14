@@ -1,6 +1,5 @@
 import { OffloadingBackend } from "../HoopaConfig.js";
 import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
-import { RegularTask } from "extended-task-graph/RegularTask";
 import chalk from "chalk";
 import { Backend } from "./Backend.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
@@ -8,6 +7,7 @@ import { DefaultBackend } from "./DefaultBackend.js";
 import { XrtCxxBackend } from "./XrtCxxBackend.js";
 import { XrtCBackend } from "./XrtCBackend.js";
 import { AHoopaStage } from "../AHoopaStage.js";
+import { Cluster } from "extended-task-graph/Cluster";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -15,12 +15,11 @@ export class Offloader extends AHoopaStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public offload(task: RegularTask, backend: OffloadingBackend, debug: boolean = false): boolean {
-        this.log(`Offloading cluster majored by task ${task.getUniqueName()} using ${backend}`);
+    public offload(cluster: Cluster, backend: OffloadingBackend, debug: boolean = false): boolean {
+        this.log(`Offloading cluster ${cluster.getName()} using ${backend}`);
 
         const extractor = new ClusterExtractor();
-        const filename = `cluster_${task.getName()}`;
-        const wrapperFun = extractor.extractClusterFromTask(task, filename, "cluster");
+        const wrapperFun = extractor.extractCluster(cluster, cluster.getName());
         if (wrapperFun == null) {
             this.logError("Cluster extraction failed!");
             return false;
