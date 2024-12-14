@@ -1,9 +1,9 @@
 import { FileJp, FunctionJp, Scope, Statement } from "@specs-feup/clava/api/Joinpoints.js";
-import { Backend } from "./Backend.js";
+import { ABackend } from "./ABackend.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import { ClusterInOut } from "extended-task-graph/Cluster";
 
-export class XrtCxxBackend extends Backend {
+export class XrtCxxBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
         super(topFunctionName, outputDir, appName, "XRT");
     }

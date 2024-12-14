@@ -3,7 +3,7 @@ import { AHoopaStage } from "../AHoopaStage.js";
 import { Cluster } from "extended-task-graph/Cluster";
 import { HoopaAlgorithm } from "../HoopaConfig.js";
 
-export abstract class ClusteringAlgorithm extends AHoopaStage {
+export abstract class AHoopaAlgorithm extends AHoopaStage {
     constructor(algorithmName: string, topFunctionName: string, outputDir: string, appName: string) {
         super(`Alg-${algorithmName}`, topFunctionName, outputDir, appName);
     }
@@ -12,6 +12,6 @@ export abstract class ClusteringAlgorithm extends AHoopaStage {
 
 }
 
-export type ClusteringAlgorithmConfig = {
+export type HoopaAlgorithmConfig = {
     name: HoopaAlgorithm
 }

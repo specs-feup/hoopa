@@ -1,12 +1,12 @@
 import { GenFlowConfig } from "extended-task-graph/GenFlowConfig";
 import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
 import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
-import { ClusteringAlgorithmConfig } from "./algorithms/ClusteringAlgorithm.js";
+import { HoopaAlgorithmConfig } from "./algorithms/AHoopaAlgorithm.js";
 
 export type HoopaConfig = {
     decorators: TaskGraphDecorator[],
     backends: OffloadingBackend[],
-    algorithm: ClusteringAlgorithmConfig
+    algorithm: HoopaAlgorithmConfig
 }
 
 export enum TaskGraphDecorator {

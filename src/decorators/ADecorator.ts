@@ -4,7 +4,7 @@ import { TaskType } from "extended-task-graph/TaskType";
 import { RegularTask } from "extended-task-graph/RegularTask";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 
-export abstract class EtgDecorator extends AHoopaStage {
+export abstract class ADecorator extends AHoopaStage {
     protected label: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, label: string) {

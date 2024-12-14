@@ -1,10 +1,10 @@
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { ClusteringAlgorithm, ClusteringAlgorithmConfig } from "./ClusteringAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
 import { HlsReport } from "clava-vitis-integration/HlsReport";
 import { Cluster } from "extended-task-graph/Cluster";
 import { RegularTask } from "extended-task-graph/RegularTask";
 
-export class PredefinedTasks extends ClusteringAlgorithm {
+export class PredefinedTasks extends AHoopaAlgorithm {
     private config: PredefinedTasksConfig;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, config: PredefinedTasksConfig) {
@@ -28,6 +28,6 @@ export class PredefinedTasks extends ClusteringAlgorithm {
     }
 }
 
-export type PredefinedTasksConfig = ClusteringAlgorithmConfig & {
+export type PredefinedTasksConfig = HoopaAlgorithmConfig & {
     taskNames: string[]
 }

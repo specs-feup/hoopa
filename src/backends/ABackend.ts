@@ -4,7 +4,7 @@ import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
 import { AHoopaStage } from "../AHoopaStage.js";
 import { ClusterInOut } from "extended-task-graph/Cluster";
 
-export abstract class Backend extends AHoopaStage {
+export abstract class ABackend extends AHoopaStage {
     private backendName: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, backendName: string) {

@@ -2,7 +2,7 @@ import { SuiteSelector } from "clava-lite-benchmarks/SuiteSelector";
 import { HoopaSuiteRunner } from "./HoopaSuiteRunner.js";
 import { HoopaAlgorithm, HoopaConfig, OffloadingBackend, TaskGraphDecorator } from "../src/HoopaConfig.js";
 import { PredefinedTasksConfig } from "../src/algorithms/PredefinedTasks.js";
-import { ClusteringAlgorithm } from "../src/algorithms/ClusteringAlgorithm.js";
+import { AHoopaAlgorithm } from "../src/algorithms/AHoopaAlgorithm.js";
 import { SingleHotspotTaskConfig } from "../src/algorithms/SingleHotspotTask.js";
 
 const suite = SuiteSelector.APPS;

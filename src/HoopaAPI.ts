@@ -3,7 +3,7 @@ import { TaskGraph } from "extended-task-graph/TaskGraph";
 import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "extended-task-graph/Cluster";
-import { EtgDecorator } from "./decorators/EtgDecorator.js";
+import { ADecorator } from "./decorators/ADecorator.js";
 import { TaskGraphOutput } from "extended-task-graph/OutputDirectories";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
@@ -90,7 +90,7 @@ export class HoopaAPI extends AHoopaStage {
         }
     }
 
-    private applyDecoration(etg: TaskGraph, decorator: EtgDecorator, cachedRes: string): void {
+    private applyDecoration(etg: TaskGraph, decorator: ADecorator, cachedRes: string): void {
         const fullCachedRes = `${this.getOutputDir()}/${cachedRes}`;
         if (Io.isFile(fullCachedRes)) {
             decorator.applyCachedDecorations(etg, fullCachedRes);

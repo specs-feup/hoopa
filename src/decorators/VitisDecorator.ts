@@ -1,13 +1,13 @@
 import { RegularTask } from "extended-task-graph/RegularTask";
 import { AmdPlatform, ClockUnit, HlsConfig, OutputFormat, UncertaintyUnit } from "clava-vitis-integration/HlsConfig";
-import { EtgDecorator } from "./EtgDecorator.js";
+import { ADecorator } from "./ADecorator.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { VitisHls } from "clava-vitis-integration/VitisHls";
 import { HlsReport } from "clava-vitis-integration/HlsReport";
 import { DotConverter } from "extended-task-graph/DotConverter";
 import { TaskGraph } from "extended-task-graph/TaskGraph";
 
-export class VitisDecorator extends EtgDecorator {
+export class VitisDecorator extends ADecorator {
     private subfolder: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string) {

@@ -1,9 +1,9 @@
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { ClusteringAlgorithm, ClusteringAlgorithmConfig } from "./ClusteringAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
 import { HlsReport } from "clava-vitis-integration/HlsReport";
 import { Cluster } from "extended-task-graph/Cluster";
 
-export class SingleHotspotTask extends ClusteringAlgorithm {
+export class SingleHotspotTask extends AHoopaAlgorithm {
     private config: SingleHotspotTaskConfig;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, config: SingleHotspotTaskConfig) {
@@ -42,4 +42,4 @@ export class SingleHotspotTask extends ClusteringAlgorithm {
     }
 }
 
-export type SingleHotspotTaskConfig = ClusteringAlgorithmConfig & {}
+export type SingleHotspotTaskConfig = HoopaAlgorithmConfig & {}
