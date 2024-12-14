@@ -1,11 +1,14 @@
 import { TaskGraph } from "extended-task-graph/TaskGraph";
-import { ClusteringAlgorithm } from "./ClusteringAlgorithm.js"
+import { ClusteringAlgorithm, ClusteringAlgorithmConfig } from "./ClusteringAlgorithm.js"
 import { HlsReport } from "clava-vitis-integration/HlsReport";
 import { Cluster } from "extended-task-graph/Cluster";
 
 export class SingleHotspotTask extends ClusteringAlgorithm {
-    constructor(topFunctionName: string, outputDir: string, appName: string) {
+    private config: SingleHotspotTaskConfig;
+
+    constructor(topFunctionName: string, outputDir: string, appName: string, config: SingleHotspotTaskConfig) {
         super("SingleHotspotTask", topFunctionName, outputDir, appName);
+        this.config = config;
     }
 
     public run(etg: TaskGraph): Cluster {
@@ -24,8 +27,10 @@ export class SingleHotspotTask extends ClusteringAlgorithm {
             }
         }
 
-        const cluster = new Cluster(etg);
+        const cluster = new Cluster();
         cluster.addTask(currMaxTask!);
         return cluster;
     }
 }
+
+export type SingleHotspotTaskConfig = ClusteringAlgorithmConfig & {}
