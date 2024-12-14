@@ -1,32 +1,7 @@
-# clava-project-template
+# Hoopa
 
-A template for developing projects for Clava in Typescript
+Hoopa (**Ho**listic **o**ptimization and **p**artitioning **a**lgorithm) is an extension to the [Clava C/C++ to C/C++ source-to-source compiler](https://github.com/specs-feup/clava) that takes in any C/C++ application and finds a vast code region suitable for FPGA offloading. Hoopa selects this region by considering both the partitioning decisions (e.g., CPU-FPGA communication costs, FPGA resources) and the optimizations performed over the FPGA code (e.g., streaming, pipelining).
 
-## Installing dev environment
+Further description is TBD
 
-Execute the following commands to download all the required code:
-
-```bash
-npm install
-```
-
-## Executing Clava
-
-You can execute your project in Clava by running the following on your terminal
-
-```bash
-npm run run
-```
-
-Take a look inside the `scripts` field in the `package.json` file for more information.
-
-You can also run tests, get test coverage information and generate documentation for your project.
-
-## Debugging
-
-You can get debugging information using a `DEBUG` environment variable.
-This variable is used by the [debug](https://www.npmjs.com/package/debug) module to determine what to expose.
-
-```bash
-DEBUG="*" npm run run
-```
+Installation and examples are also TBD
