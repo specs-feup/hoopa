@@ -10,15 +10,21 @@ import { VitisDecorator } from "./decorators/VitisDecorator.js";
 import { PredefinedTasks, PredefinedTasksConfig } from "./algorithms/PredefinedTasks.js";
 import { SingleHotspotTask, SingleHotspotTaskConfig } from "./algorithms/SingleHotspotTask.js";
 import { Offloader } from "./Offloader.js";
+import { parse } from "yaml";
 
 export class HoopaAPI extends AHoopaStage {
     private config: HoopaConfig;
     private etgApi: ExtendedTaskGraphAPI;
+    private target: Record<string, any>;
 
     constructor(topFunctionName: string, config: HoopaConfig, outputDir = "output", appName = "default_app_name") {
         super("API", topFunctionName, `${outputDir}/${appName}`, appName);
         this.config = config;
         this.etgApi = new ExtendedTaskGraphAPI(topFunctionName, outputDir, appName);
+
+        const targetYaml = Io.readFile(config.target);
+        this.target = parse(targetYaml);
+        console.log(this.target);
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {

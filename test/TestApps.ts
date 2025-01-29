@@ -23,10 +23,8 @@ const settings = {
         algorithm: {
             name: HoopaAlgorithm.PREDEFINED_TASKS,
             taskNames: ["convolve2d_rep2", "combthreshold"]
-        } as PredefinedTasksConfig
-        // algorithm: {
-        //     name: HoopaAlgorithm.SINGLE_HOTSPOT
-        // } as SingleHotspotTaskConfig
+        } as PredefinedTasksConfig,
+        target: "targets/ZCU102.yaml"
     } as HoopaConfig
 }
 

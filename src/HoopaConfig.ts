@@ -6,7 +6,8 @@ import { HoopaAlgorithmConfig } from "./algorithms/AHoopaAlgorithm.js";
 export type HoopaConfig = {
     decorators: TaskGraphDecorator[],
     backends: OffloadingBackend[],
-    algorithm: HoopaAlgorithmConfig
+    algorithm: HoopaAlgorithmConfig,
+    target: string
 }
 
 export enum TaskGraphDecorator {
