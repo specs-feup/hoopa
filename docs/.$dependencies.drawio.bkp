@@ -89,33 +89,33 @@
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-22" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;dashed=1;strokeColor=#6c8ebf;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=open;endFill=0;fillColor=#dae8fc;" parent="1" edge="1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="630" y="424.83" as="sourcePoint" />
-            <mxPoint x="670" y="424.83" as="targetPoint" />
+            <mxPoint x="620" y="424.83" as="sourcePoint" />
+            <mxPoint x="660" y="424.83" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-23" value="A" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="610" y="410" width="30" height="30" as="geometry" />
+          <mxGeometry x="600" y="410" width="30" height="30" as="geometry" />
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-24" value="B" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="660" y="410" width="30" height="30" as="geometry" />
+          <mxGeometry x="650" y="410" width="30" height="30" as="geometry" />
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-26" value="B is an NPM dependency of A" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="610" y="420" width="170" height="30" as="geometry" />
+          <mxGeometry x="600" y="420" width="170" height="30" as="geometry" />
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-27" style="edgeStyle=none;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;dashed=1;strokeColor=#b85450;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=open;endFill=0;fillColor=#f8cecc;" parent="1" edge="1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="630" y="464.83" as="sourcePoint" />
-            <mxPoint x="670" y="464.83" as="targetPoint" />
+            <mxPoint x="620" y="464.83" as="sourcePoint" />
+            <mxPoint x="660" y="464.83" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-28" value="A" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="610" y="450" width="30" height="30" as="geometry" />
+          <mxGeometry x="600" y="450" width="30" height="30" as="geometry" />
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-29" value="B" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="660" y="450" width="30" height="30" as="geometry" />
+          <mxGeometry x="650" y="450" width="30" height="30" as="geometry" />
         </mxCell>
         <mxCell id="dVfIO7OX2nIznEWuoKcd-30" value="B is a Git&amp;nbsp;submodule of A" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;" parent="1" vertex="1">
-          <mxGeometry x="610" y="460" width="150" height="30" as="geometry" />
+          <mxGeometry x="600" y="460" width="150" height="30" as="geometry" />
         </mxCell>
         <mxCell id="ogCZ8KK5MR5QRVea0IAI-1" value="specs-feup/clava specs-feup/lara" style="swimlane;whiteSpace=wrap;html=1;collapsible=0;startSize=30;" vertex="1" parent="1">
           <mxGeometry x="450" y="190" width="140" height="50" as="geometry">
