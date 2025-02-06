@@ -1,0 +1,3 @@
+[submodule "res/libc-hls"]
+	path = res/libc-hls
+	url = https://github.com/tiagolascasas/libc-hls
