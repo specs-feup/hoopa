@@ -1,0 +1,48 @@
+# name of the application, used for the root output folder
+name: edgedetect
+
+# directory for the root output folder (excluding it)
+output: "output/apps"
+
+source:
+  builtin: true
+  # if builtin = true, specify the clava-lite-benchmarks suite name
+  suite: apps
+  # if builtin = false, specify the source code path
+  path: "."
+
+# parse the ETG-ready code directly if available (true)
+# or always generate it from scratch (false)
+caching: true
+
+etg-config:
+  # transformations are applied in order, and may be called multiple times
+  # available transformations are:
+  # - array-flattening
+  # - struct-flattening
+  # - constant-folding-propagation
+  recipe:
+    - array-flattening
+    - constant-folding-propagation
+    - struct-flattening
+    - constant-folding-propagation
+
+hoopa-config:
+  # available decorators: vitis-hls
+  decorators:
+    - vitis-hls
+  # available backends: default, xrt
+  backends:
+    - xrt
+  # available algorithms: predefined-tasks, single-hotspot
+  algorithm:
+    name: predefined-tasks
+    # if predefined-tasks:
+    taskNames:
+      - "convolve2d_rep2"
+      - "combthreshold"
+    # if single-hotspot:
+    hotspot: "combthreshold"
+
+  # available targets: ZCU102, AlveoU250 (case insensitive)
+  target: ZCU102
