@@ -1,7 +1,7 @@
 {
-  "name": "holistic-partop",
+  "name": "@specs-feup/hoopa",
   "version": "1.0.0",
-  "author": "tiagolascasas",
+  "author": "Tiago Lascasas Santos <tiagolascasas@outlook.com> (https://tiagolascasas.dev)",
   "description": "An automatic, single-pass algorithm for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
   "type": "module",
   "scripts": {
@@ -11,14 +11,17 @@
     "docs": "typedoc",
     "bench:apps": "clava dist/test/TestApps.js"
   },
+  "files": [
+    "inputs/"
+  ],
   "dependencies": {
-    "@specs-feup/clava": "^3.0.1",
-    "@specs-feup/lara": "^3.0.2",
+    "@specs-feup/clava": "^3.0.8",
+    "@specs-feup/lara": "^3.0.5",
+    "@specs-feup/clava-code-transforms": "^1.0.0",
+    "@specs-feup/clava-lite-benchmarks": "^1.0.0",
+    "@specs-feup/clava-vitis-integration": "^1.0.0",
+    "@specs-feup/extended-task-graph": "^1.0.0",
     "chalk": "^5.3.0",
-    "clava-code-transforms": "^1.0.0",
-    "clava-lite-benchmarks": "^1.0.0",
-    "clava-vitis-integration": "^1.0.0",
-    "extended-task-graph": "^1.0.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
