@@ -1,11 +1,11 @@
-import { RegularTask } from "extended-task-graph/RegularTask";
-import { AmdPlatform, ClockUnit, HlsConfig, OutputFormat, UncertaintyUnit } from "clava-vitis-integration/HlsConfig";
+import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
+import { AmdPlatform, ClockUnit, OutputFormat, UncertaintyUnit, VitisHlsConfig } from "@specs-feup/clava-vitis-integration/VitisHlsConfig";
 import { ADecorator } from "./ADecorator.js";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { VitisHls } from "clava-vitis-integration/VitisHls";
-import { HlsReport } from "clava-vitis-integration/HlsReport";
-import { DotConverter } from "extended-task-graph/DotConverter";
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { VitisHls } from "@specs-feup/clava-vitis-integration/VitisHls";
+import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
+import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 
 export class VitisDecorator extends ADecorator {
     private subfolder: string;
@@ -30,8 +30,8 @@ export class VitisDecorator extends ADecorator {
         return report;
     }
 
-    private generateHlsEstimate(topFunction: string): HlsReport {
-        const config = new HlsConfig(topFunction)
+    private generateHlsEstimate(topFunction: string): VitisSynReport {
+        const config = new VitisHlsConfig(topFunction)
             .addSources(Clava.getProgram().files)
             .setClock({ value: 100, unit: ClockUnit.MEGAHERTZ })
             .setUncertainty({ value: 2, unit: UncertaintyUnit.NANOSECOND })
@@ -48,7 +48,7 @@ export class VitisDecorator extends ADecorator {
 export class VitisDotConverter extends DotConverter {
 
     public getLabelOfTask(task: RegularTask): string {
-        const report = task.getAnnotation("Vitis") as HlsReport;
+        const report = task.getAnnotation("Vitis") as VitisSynReport;
         if (!report) {
             return task.getName();
         }

@@ -1,15 +1,15 @@
 import { OffloadingBackend } from "./HoopaConfig.js";
-import { ClusterExtractor } from "extended-task-graph/ClusterExtractor";
+import { ClusterExtractor } from "@specs-feup/extended-task-graph/ClusterExtractor";
 import chalk from "chalk";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { DefaultBackend } from "./backends/DefaultBackend.js";
 import { XrtCxxBackend } from "./backends/XrtCxxBackend.js";
 import { XrtCBackend } from "./backends/XrtCBackend.js";
 import { AHoopaStage } from "./AHoopaStage.js";
-import { Cluster, ClusterInOut } from "extended-task-graph/Cluster";
+import { Cluster, ClusterInOut } from "@specs-feup/extended-task-graph/Cluster";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
-import { RegularTask } from "extended-task-graph/RegularTask";
-import { TaskExtractor } from "extended-task-graph/TaskExtractor";
+import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
+import { TaskExtractor } from "@specs-feup/extended-task-graph/TaskExtractor";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {

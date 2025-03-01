@@ -1,8 +1,8 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { Call, ExprStmt, FunctionJp, Scope, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
-import { SourceCodeOutput } from "extended-task-graph/OutputDirectories";
+import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import { AHoopaStage } from "../AHoopaStage.js";
-import { ClusterInOut } from "extended-task-graph/Cluster";
+import { ClusterInOut } from "@specs-feup/extended-task-graph/Cluster";
 
 export abstract class ABackend extends AHoopaStage {
     private backendName: string;

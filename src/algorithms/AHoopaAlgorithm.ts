@@ -1,6 +1,6 @@
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
+import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { AHoopaStage } from "../AHoopaStage.js";
-import { Cluster } from "extended-task-graph/Cluster";
 import { HoopaAlgorithm } from "../HoopaConfig.js";
 
 export abstract class AHoopaAlgorithm extends AHoopaStage {
@@ -9,7 +9,6 @@ export abstract class AHoopaAlgorithm extends AHoopaStage {
     }
 
     public abstract run(etg: TaskGraph): Cluster;
-
 }
 
 export type HoopaAlgorithmConfig = {

@@ -1,4 +1,4 @@
-import { SuiteRunner } from "clava-lite-benchmarks/SuiteRunner";
+import { SuiteRunner } from "@specs-feup/clava-lite-benchmarks/SuiteRunner";
 import { HoopaAPI } from "../src/HoopaAPI.js";
 
 export class HoopaSuiteRunner extends SuiteRunner {

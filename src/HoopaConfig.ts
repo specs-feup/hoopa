@@ -1,6 +1,6 @@
-import { GenFlowConfig } from "extended-task-graph/GenFlowConfig";
-import { SubsetTransform } from "extended-task-graph/SubsetTransforms";
-import { TransFlowConfig } from "extended-task-graph/TransFlowConfig";
+import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
+import { SubsetTransform } from "@specs-feup/extended-task-graph/SubsetTransforms";
+import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
 import { HoopaAlgorithmConfig } from "./algorithms/AHoopaAlgorithm.js";
 
 export type HoopaConfig = {

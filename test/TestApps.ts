@@ -1,4 +1,4 @@
-import { SuiteSelector } from "clava-lite-benchmarks/SuiteSelector";
+import { SuiteSelector } from "@specs-feup/clava-lite-benchmarks/SuiteSelector";
 import { HoopaSuiteRunner } from "./HoopaSuiteRunner.js";
 import { HoopaAlgorithm, HoopaConfig, OffloadingBackend, TaskGraphDecorator } from "../src/HoopaConfig.js";
 import { PredefinedTasksConfig } from "../src/algorithms/PredefinedTasks.js";

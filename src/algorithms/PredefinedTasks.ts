@@ -1,8 +1,7 @@
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
-import { HlsReport } from "clava-vitis-integration/HlsReport";
-import { Cluster } from "extended-task-graph/Cluster";
-import { RegularTask } from "extended-task-graph/RegularTask";
+import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
+import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 
 export class PredefinedTasks extends AHoopaAlgorithm {
     private config: PredefinedTasksConfig;

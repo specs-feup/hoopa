@@ -1,7 +1,7 @@
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { AHoopaStage } from "../AHoopaStage.js";
-import { TaskType } from "extended-task-graph/TaskType";
-import { RegularTask } from "extended-task-graph/RegularTask";
+import { TaskType } from "@specs-feup/extended-task-graph/TaskType";
+import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 
 export abstract class ADecorator extends AHoopaStage {

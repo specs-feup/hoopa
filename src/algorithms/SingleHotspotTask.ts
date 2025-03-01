@@ -1,7 +1,7 @@
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
-import { HlsReport } from "clava-vitis-integration/HlsReport";
-import { Cluster } from "extended-task-graph/Cluster";
+import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
+import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 
 export class SingleHotspotTask extends AHoopaAlgorithm {
     private config: SingleHotspotTaskConfig;
@@ -22,7 +22,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
                 this.logWarning(`Task ${task.getName()} does not have a Vitis annotation, skipping it`);
                 continue;
             }
-            const report = task.getAnnotation("Vitis") as HlsReport;
+            const report = task.getAnnotation("Vitis") as VitisSynReport;
             if (report.execTimeWorst.value > currMaxTime) {
                 currMaxTime = report.execTimeWorst.value;
                 currMaxTask = task;

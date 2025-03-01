@@ -1,10 +1,10 @@
-import { ExtendedTaskGraphAPI } from "extended-task-graph/ExtendedTaskGraphAPI";
-import { TaskGraph } from "extended-task-graph/TaskGraph";
+import { ExtendedTaskGraphAPI } from "@specs-feup/extended-task-graph/ExtendedTaskGraphAPI";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
-import { Cluster } from "extended-task-graph/Cluster";
+import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { ADecorator } from "./decorators/ADecorator.js";
-import { TaskGraphOutput } from "extended-task-graph/OutputDirectories";
+import { TaskGraphOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
 import { PredefinedTasks, PredefinedTasksConfig } from "./algorithms/PredefinedTasks.js";
