@@ -1,9 +1,10 @@
 {
   "name": "@specs-feup/hoopa",
-  "version": "0.8.0",
+  "version": "0.6.0",
   "author": "Tiago Lascasas Santos <tiagolascasas@outlook.com> (https://tiagolascasas.dev)",
   "description": "A suite of heuristic, single-pass algorithms for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
   "type": "module",
+  "private": false,
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -13,13 +14,20 @@
     "test:single": "clava classic dist/test/TestSingle.js -p inputs/edgedetect/edge_detect.cpp"
   },
   "files": [
-    "inputs/"
+    "dist/src"
   ],
+  "exports": {
+    "./HoopaAPI": "./dist/src/HoopaAPI.js",
+    "./HoopaAlgorithm": "./dist/src/HoopaConfig.js",
+    "./HoopaConfig": "./dist/src/HoopaConfig.js",
+    "./OffloadingBackend": "./dist/src/HoopaConfig.js",
+    "./TaskGraphDecorator": "./dist/src/HoopaConfig.js",
+    "./PredefinedTasksConfig": "./dist/src/algorithms/PredefinedTasks.js"
+  },
   "dependencies": {
     "@specs-feup/clava": "^3.0.8",
     "@specs-feup/lara": "^3.0.5",
     "@specs-feup/clava-code-transforms": "^1.0.0",
-    "@specs-feup/clava-lite-benchmarks": "^1.0.0",
     "@specs-feup/clava-vitis-integration": "^1.0.0",
     "@specs-feup/extended-task-graph": "^1.0.0",
     "chalk": "^5.3.0",
@@ -27,6 +35,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
+    "@specs-feup/clava-lite-benchmarks": "^1.0.0",
     "@types/jest": "^29.5.12",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
@@ -39,5 +48,9 @@
     "ts-jest": "^29.2.2",
     "typedoc": "^0.26.4",
     "typescript": "^5.5.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/specs-feup/hoopa.git"
   }
 }
