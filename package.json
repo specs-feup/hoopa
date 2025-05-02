@@ -1,15 +1,16 @@
 {
   "name": "@specs-feup/hoopa",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "author": "Tiago Lascasas Santos <tiagolascasas@outlook.com> (https://tiagolascasas.dev)",
-  "description": "An automatic, single-pass algorithm for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
+  "description": "A suite of heuristic, single-pass algorithms for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint .",
     "docs": "typedoc",
-    "bench:apps": "clava dist/test/TestApps.js"
+    "bench:apps": "clava dist/test/TestApps.js",
+    "test:single": "clava classic dist/test/TestSingle.js -p inputs/edgedetect/edge_detect.cpp"
   },
   "files": [
     "inputs/"

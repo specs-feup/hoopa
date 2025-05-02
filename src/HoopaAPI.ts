@@ -22,9 +22,15 @@ export class HoopaAPI extends AHoopaStage {
         this.config = config;
         this.etgApi = new ExtendedTaskGraphAPI(topFunctionName, outputDir, appName);
 
-        const targetYaml = Io.readFile(config.target);
-        this.target = parse(targetYaml);
-        console.log(this.target);
+        try {
+            const targetYaml = Io.readFile(config.target);
+            this.target = parse(targetYaml);
+            console.log(this.target);
+        }
+        catch (error) {
+            this.logError(`Error reading target YAML file: ${error}`);
+            this.target = {};
+        }
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {
