@@ -33,15 +33,17 @@ export class HoopaAPI extends AHoopaStage {
         this.logLine();
         this.log("Running Hoopa for the current AST");
 
-        this.log(`Generated ${this.runs.length} run configurations from provided HoopaConfig:`);
-        for (const runConfig of this.runs) {
-            this.log(`- decs: ${runConfig.decorators}, alg: ${runConfig.algorithm}, algOpts: {...}, bcknds: ${runConfig.backends}, tgt: ${runConfig.target.name}`);
-        }
+        this.log(`Generated ${this.runs.length} run configurations from provided HoopaConfig`);
 
         for (const runConfig of this.runs) {
             this.logLine();
             this.log(`Running Hoopa for run configuration:`);
-            this.log(`dec: ${runConfig.decorators}, alg: ${runConfig.algorithm}, algOpts: {...}, bcknd: ${runConfig.backends}, tgt: ${runConfig.target.name}`);
+            this.log(` name:         ${runConfig.variant}`);
+            this.log(` decorators:   ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
+            this.log(` algorithm:    ${runConfig.algorithm}`);
+            this.log(` alg. options: ${JSON.stringify(runConfig.algorithmOptions)}`);
+            this.log(` backends:     ${runConfig.backends}`);
+            this.log(` target:       ${runConfig.target.name}`);
 
             const etg = this.getTaskGraph(skipCodeFlow);
             if (!etg) {
@@ -60,8 +62,9 @@ export class HoopaAPI extends AHoopaStage {
 
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
         if (!skipCodeFlow) {
-            this.log("Running code transformation flow...");
+            this.log("Starting code transformation flow...");
             this.etgApi.runCodeTransformationFlow(DefaultTransFlowConfig);
+            this.log("Code transformation flow finished");
         }
 
         this.log("Running ETG generation flow...");
@@ -70,17 +73,22 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private runHoopa(etg: TaskGraph, config: HoopaRun): void {
-        this.log("Running ETG decoration")
+        this.log("Starting ETG decoration")
         this.decorate(etg, config.decorators);
 
-        this.log("Running partitioning and optimization algorithm");
+        this.log("Starting partitioning and optimization algorithm");
         const cluster = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
-        this.log("Running offloading");
+        this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
     }
 
     private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
+        if (decorators.length === 0) {
+            this.log("No decorators to apply");
+            return;
+        }
+
         for (const decorator of decorators) {
             switch (decorator) {
                 case TaskGraphDecorator.VITIS_HLS:
