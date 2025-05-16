@@ -63,12 +63,12 @@ export class HoopaAPI extends AHoopaStage {
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
         if (!skipCodeFlow) {
             this.log("Starting code transformation flow...");
-            this.etgApi.runCodeTransformationFlow(DefaultTransFlowConfig);
+            this.etgApi.runCodeTransformationFlow(this.transFlowConfig);
             this.log("Code transformation flow finished");
         }
 
         this.log("Running ETG generation flow...");
-        const etg = this.etgApi.runTaskGraphGenerationFlow(DefaultGenFlowConfig);
+        const etg = this.etgApi.runTaskGraphGenerationFlow(this.genFlowConfig);
         return etg;
     }
 
