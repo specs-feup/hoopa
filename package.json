@@ -10,8 +10,9 @@
     "build:watch": "tsc --watch",
     "lint": "eslint .",
     "docs": "typedoc",
-    "bench:apps": "clava dist/test/TestApps.js",
-    "test:single": "clava classic dist/test/TestSingle.js -p inputs/edgedetect/edge_detect.cpp"
+    "bench:apps": "clava dist/test/TestAppsSuite.js -ncg",
+    "test:single-hotspot": "clava classic dist/test/TestSingleHotspot.js -p inputs/edgedetect/edge_detect.cpp -ncg",
+    "test:predefined-tasks": "clava classic dist/test/TestPredefinedTasks.js -p inputs/edgedetect/edge_detect.cpp -ncg"
   },
   "files": [
     "dist/src"
@@ -22,7 +23,8 @@
     "./HoopaConfig": "./dist/src/HoopaConfig.js",
     "./OffloadingBackend": "./dist/src/HoopaConfig.js",
     "./TaskGraphDecorator": "./dist/src/HoopaConfig.js",
-    "./PredefinedTasksConfig": "./dist/src/algorithms/PredefinedTasks.js"
+    "./PredefinedTasksOptions": "./dist/src/algorithms/PredefinedTasks.js",
+    "./SingleHotspotTaskOptions": "./dist/src/algorithms/SingleHotspotTask.js"
   },
   "dependencies": {
     "@specs-feup/clava": "^3.0.8",

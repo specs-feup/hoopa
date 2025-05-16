@@ -1,12 +1,12 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 
 export class SingleHotspotTask extends AHoopaAlgorithm {
-    private config: SingleHotspotTaskConfig;
+    private config: SingleHotspotTaskOptions;
 
-    constructor(topFunctionName: string, outputDir: string, appName: string, config: SingleHotspotTaskConfig) {
+    constructor(topFunctionName: string, outputDir: string, appName: string, config: SingleHotspotTaskOptions) {
         super("SingleHotspotTask", topFunctionName, outputDir, appName);
         this.config = config;
     }
@@ -42,4 +42,4 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
     }
 }
 
-export type SingleHotspotTaskConfig = HoopaAlgorithmConfig & {}
+export type SingleHotspotTaskOptions = HoopaAlgorithmOptions & {}

@@ -1,8 +1,0 @@
-platform: ZCU102
-part_number: TBD
-API: XRT
-environment:
-  name: PetaLinux
-  rootfs: path/to/rootfs
-  image: path/to/kernel/image
-  sysroot: path/to/sysroot

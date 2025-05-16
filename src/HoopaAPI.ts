@@ -1,62 +1,60 @@
 import { ExtendedTaskGraphAPI } from "@specs-feup/extended-task-graph/ExtendedTaskGraphAPI";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, TaskGraphDecorator } from "./HoopaConfig.js";
+import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, HoopaRun, OffloadingBackend, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { ADecorator } from "./decorators/ADecorator.js";
 import { TaskGraphOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
-import { PredefinedTasks, PredefinedTasksConfig } from "./algorithms/PredefinedTasks.js";
-import { SingleHotspotTask, SingleHotspotTaskConfig } from "./algorithms/SingleHotspotTask.js";
+import { PredefinedTasks, PredefinedTasksOptions } from "./algorithms/PredefinedTasks.js";
+import { SingleHotspotTask, SingleHotspotTaskOptions } from "./algorithms/SingleHotspotTask.js";
 import { Offloader } from "./Offloader.js";
-import { parse } from "yaml";
+import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
+import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
+import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 
 export class HoopaAPI extends AHoopaStage {
-    private config: HoopaConfig;
     private etgApi: ExtendedTaskGraphAPI;
-    private target: Record<string, any>;
+    private transFlowConfig: TransFlowConfig;
+    private genFlowConfig: GenFlowConfig;
+    private runs: HoopaRun[];
 
     constructor(topFunctionName: string, config: HoopaConfig, outputDir = "output", appName = "default_app_name") {
         super("API", topFunctionName, `${outputDir}/${appName}`, appName);
-        this.config = config;
+        this.transFlowConfig = config.getTransFlowConfig();
+        this.genFlowConfig = config.getGenFlowConfig();
         this.etgApi = new ExtendedTaskGraphAPI(topFunctionName, outputDir, appName);
 
-        try {
-            const targetYaml = Io.readFile(config.target);
-            this.target = parse(targetYaml);
-            console.log(this.target);
-        }
-        catch (error) {
-            this.logError(`Error reading target YAML file: ${error}`);
-            this.target = {};
-        }
+        this.runs = config.generateRuns();
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {
         this.logLine();
         this.log("Running Hoopa for the current AST");
 
-        const etg = this.getTaskGraph(skipCodeFlow);
-        if (!etg) {
-            this.logError("ETG generation failed!");
-            return;
+        this.log(`Generated ${this.runs.length} run configurations from provided HoopaConfig:`);
+        for (const runConfig of this.runs) {
+            this.log(`- decs: ${runConfig.decorators}, alg: ${runConfig.algorithm}, algOpts: {...}, bcknds: ${runConfig.backends}, tgt: ${runConfig.target.name}`);
         }
-        this.log("ETG generated successfully!");
 
-        this.run(etg);
+        for (const runConfig of this.runs) {
+            this.logLine();
+            this.log(`Running Hoopa for run configuration:`);
+            this.log(`dec: ${runConfig.decorators}, alg: ${runConfig.algorithm}, algOpts: {...}, bcknd: ${runConfig.backends}, tgt: ${runConfig.target.name}`);
 
-        this.log("Finished running Hoopa");
-        this.logLine();
-    }
+            const etg = this.getTaskGraph(skipCodeFlow);
+            if (!etg) {
+                this.logError("ETG generation failed!");
+                return;
+            }
+            this.log("ETG generated successfully!");
 
-    public runWithEtg(etg: TaskGraph): void {
-        this.logLine();
-        this.log("Running Hoopa for a given ETG");
+            this.runHoopa(etg, runConfig);
+            this.logLine();
+        }
 
-        this.run(etg);
-
-        this.log("Finished running Hoopa");
+        this.log("Finished running Hoopa for all run configurations");
         this.logLine();
     }
 
@@ -71,15 +69,15 @@ export class HoopaAPI extends AHoopaStage {
         return etg;
     }
 
-    private run(etg: TaskGraph): void {
+    private runHoopa(etg: TaskGraph, config: HoopaRun): void {
         this.log("Running ETG decoration")
-        this.decorate(etg, this.config.decorators);
+        this.decorate(etg, config.decorators);
 
         this.log("Running partitioning and optimization algorithm");
-        const cluster = this.runHoopaAlgorithm(etg);
+        const cluster = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
         this.log("Running offloading");
-        this.offload(cluster);
+        this.offload(cluster, config.backends, config.variant);
     }
 
     private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
@@ -119,34 +117,35 @@ export class HoopaAPI extends AHoopaStage {
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabel().toLowerCase()}.dot`, etgSubdir);
     }
 
-    private runHoopaAlgorithm(etg: TaskGraph): Cluster {
+    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): Cluster {
         const topFunctionName = this.getTopFunctionName();
         const outputDir = this.getOutputDir();
         const appName = this.getAppName();
 
-        switch (this.config.algorithm.name) {
+        switch (algorithm) {
             case HoopaAlgorithm.PREDEFINED_TASKS:
                 {
-                    const config = this.config.algorithm as PredefinedTasksConfig;
+                    const config = options as PredefinedTasksOptions;
                     const alg = new PredefinedTasks(topFunctionName, outputDir, appName, config);
                     return alg.run(etg);
                 }
             case HoopaAlgorithm.SINGLE_HOTSPOT:
                 {
-                    const config = this.config.algorithm as SingleHotspotTaskConfig;
+                    const config = options as SingleHotspotTaskOptions;
                     const alg = new SingleHotspotTask(topFunctionName, outputDir, appName, config);
                     return alg.run(etg);
                 }
             default:
-                this.logError(`Unknown algorithm: ${this.config.algorithm.name}`);
+                this.logError(`Unknown algorithm: ${algorithm}`);
                 return new Cluster();
         }
     }
 
-    private offload(cluster: Cluster): void {
+    private offload(cluster: Cluster, backends: OffloadingBackend[], variant: string): void {
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        for (const backend of this.config.backends) {
-            offloader.offload(cluster, backend, this.config.algorithm.name);
+        for (const backend of backends) {
+            const outDir = `${variant}_${backend.toLowerCase()}`;
+            offloader.offload(cluster, backend, outDir, false);
         }
     }
 }

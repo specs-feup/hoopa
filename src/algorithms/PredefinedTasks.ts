@@ -1,12 +1,12 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { AHoopaAlgorithm, HoopaAlgorithmConfig } from "./AHoopaAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 
 export class PredefinedTasks extends AHoopaAlgorithm {
-    private config: PredefinedTasksConfig;
+    private config: PredefinedTasksOptions;
 
-    constructor(topFunctionName: string, outputDir: string, appName: string, config: PredefinedTasksConfig) {
+    constructor(topFunctionName: string, outputDir: string, appName: string, config: PredefinedTasksOptions) {
         super("PredefinedTasks", topFunctionName, outputDir, appName);
         this.config = config;
     }
@@ -27,6 +27,6 @@ export class PredefinedTasks extends AHoopaAlgorithm {
     }
 }
 
-export type PredefinedTasksConfig = HoopaAlgorithmConfig & {
+export type PredefinedTasksOptions = HoopaAlgorithmOptions & {
     taskNames: string[]
 }

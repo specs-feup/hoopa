@@ -1,5 +1,0 @@
-platform: "Alveo U250"
-part_number: TBD
-API: XRT
-environment:
-  name: Linux_x86
