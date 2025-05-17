@@ -1,5 +1,5 @@
 import { FileJp, FunctionJp, Scope, Statement } from "@specs-feup/clava/api/Joinpoints.js";
-import { ABackend } from "./ABackend.js";
+import { ABackend } from "../ABackend.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import { ClusterInOut } from "@specs-feup/extended-task-graph/Cluster";
 
