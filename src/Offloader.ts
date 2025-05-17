@@ -2,7 +2,7 @@ import { OffloadingBackend } from "./HoopaConfig.js";
 import { ClusterExtractor } from "@specs-feup/extended-task-graph/ClusterExtractor";
 import chalk from "chalk";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { DefaultBackend } from "./backends/DefaultBackend.js";
+import { CpuBackend } from "./backends/CpuBackend.js";
 import { XrtCxxBackend } from "./backends/XrtCxxBackend.js";
 import { XrtCBackend } from "./backends/XrtCBackend.js";
 import { AHoopaStage } from "./AHoopaStage.js";
@@ -46,7 +46,7 @@ export class Offloader extends AHoopaStage {
                 }
             case OffloadingBackend.OPENCL:
                 {
-                    const offloader = new DefaultBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    const offloader = new CpuBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
                     return offloader.apply(wrapperFun, inOutsMap, folderName, false);
                 }
             default:

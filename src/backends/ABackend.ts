@@ -30,12 +30,12 @@ export abstract class ABackend extends AHoopaStage {
         wrapperFun.body.replaceWith(body);
 
         if (debug) {
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}_debug`);
-            this.log(`Debug code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}_debug`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}_debug`);
+            this.log(`Debug code generated at ${SourceCodeOutput.SRC_PARENT}_debug`);
         }
         else {
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}`);
-            this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/src_${this.backendName}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}`);
+            this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}`);
         }
         Clava.popAst();
 

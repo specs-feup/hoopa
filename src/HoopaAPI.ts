@@ -1,6 +1,6 @@
 import { ExtendedTaskGraphAPI } from "@specs-feup/extended-task-graph/ExtendedTaskGraphAPI";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { DefaultGenFlowConfig, DefaultTransFlowConfig, HoopaAlgorithm, HoopaConfig, HoopaRun, OffloadingBackend, TaskGraphDecorator } from "./HoopaConfig.js";
+import { HoopaAlgorithm, HoopaConfig, HoopaRun, OffloadingBackend, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { ADecorator } from "./decorators/ADecorator.js";
