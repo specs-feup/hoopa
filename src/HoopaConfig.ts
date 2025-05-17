@@ -10,11 +10,12 @@ export enum TaskGraphDecorator {
 
 export enum HoopaAlgorithm {
     SINGLE_HOTSPOT = "single_hotspot",
-    PREDEFINED_TASKS = " predefined_tasks"
+    PREDEFINED_TASKS = "predefined_tasks"
 }
 
 export enum OffloadingBackend {
     AXI = "AXI",
+    CPU = "CPU",
     CUDA = "CUDA",
     OMPSS_FPGA = "OmpSs@FPGA",
     OPENCL = "OpenCL",
@@ -35,6 +36,7 @@ export type FpgaTarget = Target & {
         BRAMs: number;
     };
     localdeps?: {
+        vitisVersion: string;
         sysroot: string;
         rootfs: string;
         kernel: string;
@@ -79,6 +81,7 @@ export const fpgaTargets: Record<string, FpgaTarget> = {
             BRAMs: 100
         },
         localdeps: {
+            vitisVersion: "2024.2",
             sysroot: "/opt/xilinx/xrt/2022.1/sysroots/cortexa53-xilinx-linux",
             rootfs: "/opt/xilinx/xrt/2022.1/rootfs",
             kernel: "/opt/xilinx/xrt/2022.1/kernels"
@@ -95,6 +98,7 @@ export const fpgaTargets: Record<string, FpgaTarget> = {
             BRAMs: 100
         },
         localdeps: {
+            vitisVersion: "2024.2",
             sysroot: "/opt/xilinx/xrt/2022.1/sysroots/cortexa53-xilinx-linux",
             rootfs: "/opt/xilinx/xrt/2022.1/rootfs",
             kernel: "/opt/xilinx/xrt/2022.1/kernels"
@@ -242,6 +246,10 @@ export class HoopaConfig {
                 const validBackends = [];
                 for (const backend of this.backends) {
                     if (target.backends.includes(backend)) {
+                        validBackends.push(backend);
+                    }
+                    else if (backend == OffloadingBackend.CPU) {
+                        // CPU is always valid
                         validBackends.push(backend);
                     }
                 }

@@ -12,7 +12,8 @@
     "docs": "typedoc",
     "bench:apps": "clava dist/test/TestAppsSuite.js -ncg",
     "test:single-hotspot": "clava classic dist/test/TestSingleHotspot.js -p inputs/edgedetect/edge_detect.cpp -ncg",
-    "test:predefined-tasks": "clava classic dist/test/TestPredefinedTasks.js -p inputs/edgedetect/edge_detect.cpp -ncg"
+    "test:predefined-tasks": "clava classic dist/test/TestPredefinedTasks.js -p inputs/edgedetect/edge_detect.cpp -ncg",
+    "test:predefined-tasks-multi": "clava classic dist/test/TestPredefinedTasksMultibackend.js -p inputs/edgedetect/edge_detect.cpp -ncg"
   },
   "files": [
     "dist/src"

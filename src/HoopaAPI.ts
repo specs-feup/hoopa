@@ -42,7 +42,7 @@ export class HoopaAPI extends AHoopaStage {
             this.log(` decorators:   ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
             this.log(` algorithm:    ${runConfig.algorithm}`);
             this.log(` alg. options: ${JSON.stringify(runConfig.algorithmOptions)}`);
-            this.log(` backends:     ${runConfig.backends}`);
+            this.log(` backends:     ${runConfig.backends.join(", ")}`);
             this.log(` target:       ${runConfig.target.name}`);
 
             const etg = this.getTaskGraph(skipCodeFlow);
