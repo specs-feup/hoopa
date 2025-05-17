@@ -10,6 +10,9 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import { TaskExtractor } from "@specs-feup/extended-task-graph/TaskExtractor";
 import { XrtCBackend } from "./backends/xrt/XrtCBackend.js";
+import { CudaBackend } from "./backends/cuda/CudaBackend.js";
+import { OmpSsBackend } from "./backends/ompss/OmpsSsBackend.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -37,16 +40,31 @@ export class Offloader extends AHoopaStage {
         const inOutsMap = new Map<string, ClusterInOut>(inOuts);
 
         switch (backend) {
+            case OffloadingBackend.AXI:
+                {
+                    this.logWarning("AXI backend not implemented yet, ignoring it");
+                    return false;
+                }
+            case OffloadingBackend.CPU:
+                {
+                    const offloader = new CpuBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
+                }
+            case OffloadingBackend.CUDA:
+                {
+                    const offloader = new CudaBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
+                }
+            case OffloadingBackend.OMPSS_FPGA:
+                {
+                    const offloader = new OmpSsBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
+                }
             case OffloadingBackend.XRT:
                 {
                     const offloader = Clava.isCxx() ?
                         new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    return offloader.apply(wrapperFun, inOutsMap, folderName, false);
-                }
-            case OffloadingBackend.OPENCL:
-                {
-                    const offloader = new CpuBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
                     return offloader.apply(wrapperFun, inOutsMap, folderName, false);
                 }
             default:
