@@ -34,7 +34,7 @@ export class XrtCxxBackend extends ABackend {
             this.wl(),
 
             this.generateDebugInfo(debug, "Starting kernel..."),
-            ClavaJoinPoints.stmtLiteral(`kernel_run.wait()`),
+            ClavaJoinPoints.stmtLiteral(`kernel_run.wait();`),
             this.wl(),
 
             this.generateDebugInfo(debug, "Copying data back from the buffers into the host"),
