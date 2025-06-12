@@ -34,13 +34,14 @@ export type FpgaTarget = Target & {
         FFs: number;
         DSPs: number;
         BRAM_18Ks: number;
-        URAMs?: number; // Optional, some targets may not have URAMs
+        URAMs?: number;         // Optional, some targets may not have URAMs
     };
     localdeps?: {
-        vitisVersion: string;
-        sysroot: string;
-        rootfs: string;
-        kernel: string;
+        vitisVersion?: string;  // specify a Vitis version for maximum compatibility
+        sysroot?: string;       // sysroot required to build ARM PetaLinux/Ubuntu targets
+        rootfs?: string;        // rootfs required to build SD card image for ARM targets
+        kernel?: string;        // kernel required to build SD card image for ARM targets
+        platformXsa?: string;   // some targets may already be included by default by Vitis
     }
 }
 
@@ -76,10 +77,11 @@ export const fpgaTargets: Record<string, FpgaTarget> = {
         backends: [OffloadingBackend.XRT, OffloadingBackend.OPENCL, OffloadingBackend.OMPSS_FPGA, OffloadingBackend.AXI],
         frequency: 200,
         resources: {
-            LUTs: 50000,
-            FFs: 100000,
-            DSPs: 2000,
-            BRAM_18Ks: 100
+            LUTs: 274080,
+            FFs: 548160,
+            DSPs: 2520,
+            BRAM_18Ks: 1824,
+            URAMs: 0
         },
         localdeps: {
             vitisVersion: "2024.2",
