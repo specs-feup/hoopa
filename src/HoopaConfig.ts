@@ -33,7 +33,8 @@ export type FpgaTarget = Target & {
         LUTs: number;
         FFs: number;
         DSPs: number;
-        BRAMs: number;
+        BRAM_18Ks: number;
+        URAMs?: number; // Optional, some targets may not have URAMs
     };
     localdeps?: {
         vitisVersion: string;
@@ -78,7 +79,7 @@ export const fpgaTargets: Record<string, FpgaTarget> = {
             LUTs: 50000,
             FFs: 100000,
             DSPs: 2000,
-            BRAMs: 100
+            BRAM_18Ks: 100
         },
         localdeps: {
             vitisVersion: "2024.2",
@@ -90,12 +91,13 @@ export const fpgaTargets: Record<string, FpgaTarget> = {
     kv260: {
         name: "KV260",
         backends: [OffloadingBackend.XRT, OffloadingBackend.OPENCL, OffloadingBackend.OMPSS_FPGA, OffloadingBackend.AXI],
-        frequency: 200,
+        frequency: 100,
         resources: {
-            LUTs: 50000,
-            FFs: 100000,
-            DSPs: 2000,
-            BRAMs: 100
+            LUTs: 117120,
+            FFs: 234240,
+            DSPs: 1248,
+            BRAM_18Ks: 288,
+            URAMs: 64
         },
         localdeps: {
             vitisVersion: "2024.2",
