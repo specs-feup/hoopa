@@ -2,7 +2,8 @@ import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
 import { SubsetTransform } from "@specs-feup/extended-task-graph/SubsetTransforms";
 import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
 import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
-
+import { BuiltinFpgaTarget, getFpgaTarget } from "./platforms/BuiltinFpgaPlatforms.js";
+import { BuiltinGpuTarget, getGpuTarget } from "./platforms/BuiltinGpuPlatforms.js";
 
 export enum TaskGraphDecorator {
     VITIS_HLS = "VitisHLS"
@@ -48,82 +49,6 @@ export type FpgaTarget = Target & {
 export type GpuTarget = Target & {
     memoryMb: number;
     cudaCores: number;
-}
-
-export function getFpgaTarget(name: string): FpgaTarget {
-    const target = fpgaTargets[name.toLowerCase()];
-    if (!target) {
-        throw new Error(`Target ${name} not found`);
-    }
-    return { ...target };
-}
-
-export function getGpuTarget(name: string): GpuTarget {
-    const target = gpuTargets[name.toLowerCase()];
-    if (!target) {
-        throw new Error(`Target ${name} not found`);
-    }
-    return { ...target };
-}
-
-export enum BuiltinTarget {
-    ZCU102 = "ZCU102",
-    KV260 = "KV260",
-    A100 = "A100"
-}
-
-export const fpgaTargets: Record<string, FpgaTarget> = {
-    zcu102: {
-        name: "ZCU102",
-        backends: [OffloadingBackend.XRT, OffloadingBackend.OPENCL, OffloadingBackend.OMPSS_FPGA, OffloadingBackend.AXI],
-        frequency: 200,
-        resources: {
-            LUTs: 274080,
-            FFs: 548160,
-            DSPs: 2520,
-            BRAM_18Ks: 1824,
-            URAMs: 0
-        },
-        localdeps: {
-            vitisVersion: "2024.2",
-            sysroot: "/opt/xilinx/xrt/2022.1/sysroots/cortexa53-xilinx-linux",
-            rootfs: "/opt/xilinx/xrt/2022.1/rootfs",
-            kernel: "/opt/xilinx/xrt/2022.1/kernels"
-        }
-    },
-    kv260: {
-        name: "KV260",
-        backends: [OffloadingBackend.XRT, OffloadingBackend.OPENCL, OffloadingBackend.OMPSS_FPGA, OffloadingBackend.AXI],
-        frequency: 100,
-        resources: {
-            LUTs: 117120,
-            FFs: 234240,
-            DSPs: 1248,
-            BRAM_18Ks: 288,
-            URAMs: 64
-        },
-        localdeps: {
-            vitisVersion: "2024.2",
-            sysroot: "/opt/xilinx/xrt/2022.1/sysroots/cortexa53-xilinx-linux",
-            rootfs: "/opt/xilinx/xrt/2022.1/rootfs",
-            kernel: "/opt/xilinx/xrt/2022.1/kernels"
-        }
-    }
-}
-
-export const gpuTargets: Record<string, GpuTarget> = {
-    a100: {
-        name: "A100",
-        backends: [OffloadingBackend.CUDA],
-        memoryMb: 40000,
-        cudaCores: 6912
-    },
-    rtx3060m: {
-        name: "RTX 3060 Mobile",
-        backends: [OffloadingBackend.CUDA],
-        memoryMb: 6144,
-        cudaCores: 3840
-    }
 }
 
 export const DefaultTransFlowConfig = new TransFlowConfig();
@@ -189,8 +114,14 @@ export class HoopaConfig {
         return this;
     }
 
-    public addBuiltinTarget(targetName: BuiltinTarget): HoopaConfig {
-        const target = getFpgaTarget(targetName) || getGpuTarget(targetName);
+    public addBuiltinFpgaTarget(targetName: BuiltinFpgaTarget): HoopaConfig {
+        const target = getFpgaTarget(targetName)
+        this.targets.push(target);
+        return this;
+    }
+
+    public addBuiltinGpuTarget(targetName: BuiltinGpuTarget): HoopaConfig {
+        const target = getGpuTarget(targetName)
         this.targets.push(target);
         return this;
     }

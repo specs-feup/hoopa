@@ -1,7 +1,8 @@
 import { HoopaSuiteRunner } from "./HoopaSuiteRunner.js";
-import { BuiltinTarget, HoopaAlgorithm, HoopaConfig, OffloadingBackend, TaskGraphDecorator } from "../src/HoopaConfig.js";
+import { HoopaAlgorithm, HoopaConfig, OffloadingBackend, TaskGraphDecorator } from "../src/HoopaConfig.js";
 import { APPS } from "@specs-feup/clava-lite-benchmarks/BenchmarkSuites";
 import { SingleHotspotTaskOptions } from "../src/algorithms/SingleHotspotTask.js";
+import { BuiltinFpgaTarget } from "../src/platforms/BuiltinFpgaPlatforms.js";
 
 const suite = APPS;
 const apps = [
@@ -12,7 +13,7 @@ const config = new HoopaConfig()
     .addDecorator(TaskGraphDecorator.VITIS_HLS)
     .addBackend(OffloadingBackend.XRT)
     .addAlgorithm(HoopaAlgorithm.SINGLE_HOTSPOT, {} as SingleHotspotTaskOptions)
-    .addBuiltinTarget(BuiltinTarget.ZCU102)
+    .addBuiltinFpgaTarget(BuiltinFpgaTarget.ZCU102)
 
 const runnerConfig = {
     hoopaConfig: config,
