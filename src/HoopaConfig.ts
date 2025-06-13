@@ -46,7 +46,7 @@ export type FpgaTarget = Target & {
 }
 
 export type GpuTarget = Target & {
-    memoryGb: number;
+    memoryMb: number;
 }
 
 export function getFpgaTarget(name: string): FpgaTarget {
@@ -114,7 +114,12 @@ export const gpuTargets: Record<string, GpuTarget> = {
     a100: {
         name: "A100",
         backends: [OffloadingBackend.CUDA],
-        memoryGb: 40
+        memoryMb: 40000
+    },
+    rtx3060: {
+        name: "RTX 3060",
+        backends: [OffloadingBackend.CUDA],
+        memoryMb: 6144
     }
 }
 
