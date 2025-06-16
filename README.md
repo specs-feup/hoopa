@@ -23,39 +23,26 @@ Hoopa is still in very early development, and so far we only provide two basic p
 ### Offloading user-defined tasks
 
 ```TypeScript
-import { HoopaAlgorithm, HoopaConfig, OffloadingBackend } from "@specs-feup/hoopa/HoopaAlgorithm";
-import { HoopaAPI } from "@specs-feup/hoopa/HoopaAPI";
-import { PredefinedTasksConfig } from "@specs-feup/hoopa/PredefinedTasksConfig";
-
-const config: HoopaConfig = {
-    decorators: [],
-    backends: [OffloadingBackend.XRT],
-    algorithm: {
-        name: HoopaAlgorithm.PREDEFINED_TASKS,
+const config = new HoopaConfig()
+    .addBackend(OffloadingBackend.XRT)
+    .addAlgorithm(HoopaAlgorithm.PREDEFINED_TASKS, {
         taskNames: ["convolve2d_rep2", "combthreshold"]
-    } as PredefinedTasksConfig,
-    target: "targets/ZCU102.yaml"
-};
+    } as PredefinedTasksOptions)
+    .addBuiltinFpgaTarget(BuiltinFpgaTarget.ZCU102);
 
-const hoopa = new HoopaAPI("edge_detect", config, "outputs/s40", "edgedetect");
+const hoopa = new HoopaAPI("edge_detect", config, "outputs/local", "edgedetect");
 hoopa.runFromStart(false);
 ```
 
-### Offloading the task with the highest latency
+### Offloading the task with the highest latency, as determined by Vitis
 
 ```TypeScript
-import { HoopaAlgorithm, HoopaConfig, OffloadingBackend, TaskGraphDecorator } from "@specs-feup/hoopa/HoopaAlgorithm";
-import { HoopaAPI } from "@specs-feup/hoopa/HoopaAPI";
+const config = new HoopaConfig()
+    .addDecorator(TaskGraphDecorator.VITIS_HLS)
+    .addBackend(OffloadingBackend.XRT)
+    .addAlgorithm(HoopaAlgorithm.SINGLE_HOTSPOT, {} as SingleHotspotTaskOptions)
+    .addBuiltinFpgaTarget(BuiltinFpgaTarget.ZCU102);
 
-const config: HoopaConfig = {
-    decorators: [TaskGraphDecorator.VITIS_HLS],
-    backends: [OffloadingBackend.XRT],
-    algorithm: {
-        name: HoopaAlgorithm.SINGLE_HOTSPOT
-    },
-    target: "targets/ZCU102.yaml"
-};
-
-const hoopa = new HoopaAPI("edge_detect", config, "outputs/s41", "edgedetect");
+const hoopa = new HoopaAPI("edge_detect", config, "outputs/local", "edgedetect");
 hoopa.runFromStart(false);
 ```

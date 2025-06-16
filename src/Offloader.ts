@@ -12,7 +12,6 @@ import { TaskExtractor } from "@specs-feup/extended-task-graph/TaskExtractor";
 import { XrtCBackend } from "./backends/xrt/XrtCBackend.js";
 import { CudaBackend } from "./backends/cuda/CudaBackend.js";
 import { OmpSsBackend } from "./backends/ompss/OmpsSsBackend.js";
-import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
