@@ -1,6 +1,6 @@
 {
   "name": "@specs-feup/hoopa",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "Tiago Lascasas Santos <tiagolascasas@outlook.com> (https://tiagolascasas.dev)",
   "description": "A suite of heuristic, single-pass algorithms for partitioning and optimizing a C/C++ application on a CPU-FPGA system",
   "type": "module",
