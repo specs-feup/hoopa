@@ -5,16 +5,16 @@ import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { BuiltinFpgaTarget, getFpgaTarget } from "./platforms/BuiltinFpgaPlatforms.js";
 import { BuiltinGpuTarget, getGpuTarget } from "./platforms/BuiltinGpuPlatforms.js";
 
-export enum TaskGraphDecorator {
+export const enum TaskGraphDecorator {
     VITIS_HLS = "VitisHLS"
 }
 
-export enum HoopaAlgorithm {
+export const enum HoopaAlgorithm {
     SINGLE_HOTSPOT = "single_hotspot",
     PREDEFINED_TASKS = "predefined_tasks"
 }
 
-export enum OffloadingBackend {
+export const enum OffloadingBackend {
     AXI = "AXI",
     CPU = "CPU",
     CUDA = "CUDA",
