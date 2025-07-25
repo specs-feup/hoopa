@@ -6,7 +6,8 @@ import { BuiltinFpgaTarget, getFpgaTarget } from "./platforms/BuiltinFpgaPlatfor
 import { BuiltinGpuTarget, getGpuTarget } from "./platforms/BuiltinGpuPlatforms.js";
 
 export const enum TaskGraphDecorator {
-    VITIS_HLS = "VitisHLS"
+    VITIS_HLS = "VitisHLS",
+    SYNTHESIZABILITY = "Synthesizability",
 }
 
 export const enum HoopaAlgorithm {

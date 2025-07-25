@@ -13,6 +13,7 @@ import { Offloader } from "./Offloader.js";
 import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
 import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
 import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
+import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -99,6 +100,16 @@ export class HoopaAPI extends AHoopaStage {
                             this.getAppName(),
                             "vitis_hls/initial_runs");
                         this.applyDecoration(etg, vitisDecorator, "vitis_hls/initial_runs.json");
+                        break;
+                    }
+                case TaskGraphDecorator.SYNTHESIZABILITY:
+                    {
+                        const synthDecorator = new SynthesizabilityDecorator(
+                            this.getTopFunctionName(),
+                            this.getOutputDir(),
+                            this.getAppName(),
+                            "vitis_hls/initial_runs");
+                        this.applyDecoration(etg, synthDecorator, "vitis_hls/etg_synthesizability.json");
                         break;
                     }
                 default:

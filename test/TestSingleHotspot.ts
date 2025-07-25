@@ -5,6 +5,7 @@ import { BuiltinFpgaTarget } from "../src/platforms/BuiltinFpgaPlatforms.js";
 
 const config = new HoopaConfig()
     .addDecorator(TaskGraphDecorator.VITIS_HLS)
+    .addDecorator(TaskGraphDecorator.SYNTHESIZABILITY)
     .addBackend(OffloadingBackend.XRT)
     .addAlgorithm(HoopaAlgorithm.SINGLE_HOTSPOT, {} as SingleHotspotTaskOptions)
     .addBuiltinFpgaTarget(BuiltinFpgaTarget.ZCU102);

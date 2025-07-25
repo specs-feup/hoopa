@@ -50,4 +50,8 @@ export abstract class ADecorator extends AHoopaStage {
     public abstract getDotfile(etg: TaskGraph): string;
 
     protected abstract getAnnotations(task: RegularTask): { [key: string]: any };
+
+    protected setLabels(labels: string[]): void {
+        this.labels = labels;
+    }
 }

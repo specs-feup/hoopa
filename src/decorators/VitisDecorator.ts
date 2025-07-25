@@ -10,8 +10,8 @@ import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 export class VitisDecorator extends ADecorator {
     private subfolder: string;
 
-    constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string) {
-        super(topFunctionName, outputDir, appName, "Vitis", ["Vitis"]);
+    constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string, name: string = "Vitis") {
+        super(topFunctionName, outputDir, appName, name, ["Vitis"]);
         this.subfolder = subfolder;
     }
 
