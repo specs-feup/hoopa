@@ -2,10 +2,17 @@ import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import { VitisDecorator } from "./VitisDecorator.js";
 import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
+import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 
 export class SynthesizabilityDecorator extends VitisDecorator {
     constructor(topFunctionName: string, outputDir: string, appName: string, subFolder: string) {
         super(topFunctionName, outputDir, appName, subFolder, "Synth");
+        this.setLabels(["color", "errors"]);
+    }
+
+    public getDotfile(etg: TaskGraph): string {
+        const converter = new SynthesizabilityDotConverter();
+        return converter.convert(etg);
     }
 
     protected getAnnotations(task: RegularTask): { [key: string]: any } {
@@ -21,7 +28,7 @@ export class SynthesizabilityDecorator extends VitisDecorator {
 
         this.log(`Annotated task ${task.getName()} with synthesizability data: ${isValid ? "valid" : "invalid"}`);
         return {
-            "color": isValid ? "forestgreen" : "crimson",
+            "color": isValid ? "lightgreen" : "lightcoral",
             "errors": report.errors
         };
     }
