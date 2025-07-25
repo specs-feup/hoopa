@@ -17,7 +17,7 @@ export abstract class ADecorator extends AHoopaStage {
     }
 
     public decorate(etg: TaskGraph): [string, { [key: string]: any }][] {
-        console.log(`Decorating ETG with ${this.labels.join(",")} annotations`);
+        this.log(`Decorating ETG with ${this.labels.join(", ")} annotations`);
 
         const aggregate: [string, { [key: string]: any }][] = [];
 
@@ -29,12 +29,12 @@ export abstract class ADecorator extends AHoopaStage {
                 aggregate.push([task.getName(), annotations]);
             }
         }
-        console.log(`Finished decorating ${aggregate.length} tasks with ${this.labels.join(",")} annotations`);
+        this.log(`Finished decorating ${aggregate.length} tasks with ${this.labels.join(", ")} annotations`);
         return aggregate;
     }
 
     public applyCachedDecorations(etg: TaskGraph, filename: string): void {
-        this.log(`Applying cached ${this.labels.join(",")} decorations from ${filename}`);
+        this.log(`Applying cached ${this.labels.join(", ")} decorations from ${filename}`);
 
         const decorations = Io.readJson(filename);
         for (const [taskName, annotations] of decorations) {
@@ -44,7 +44,7 @@ export abstract class ADecorator extends AHoopaStage {
                 task.setAnnotation(label, annotation);
             }
         }
-        this.log(`Finished decorating ${decorations.length} tasks with ${this.labels.join(",")} annotations`);
+        this.log(`Finished decorating ${decorations.length} tasks with ${this.labels.join(", ")} annotations`);
     }
 
     public abstract getDotfile(etg: TaskGraph): string;

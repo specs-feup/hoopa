@@ -43,7 +43,7 @@ export class SynthesizabilityDotConverter extends DotConverter {
         }
 
         const label = `${task.getName()}
-        ${color === "forestgreen" ? "Valid" : "Invalid"}`;
+        ${color === "lightgreen" ? "Valid" : "Invalid"}`;
         return label;
     }
 }
