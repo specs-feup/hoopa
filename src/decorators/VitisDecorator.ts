@@ -11,7 +11,7 @@ export class VitisDecorator extends ADecorator {
     private subfolder: string;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, subfolder: string) {
-        super(topFunctionName, outputDir, appName, "Vitis");
+        super(topFunctionName, outputDir, appName, "Vitis", ["Vitis"]);
         this.subfolder = subfolder;
     }
 
@@ -20,14 +20,14 @@ export class VitisDecorator extends ADecorator {
         return converter.convert(etg);
     }
 
-    protected getAnnotation(task: RegularTask): unknown {
+    protected getAnnotations(task: RegularTask): { [key: string]: any } {
         const topFunction = task.getName();
         this.log(`Decorating task ${topFunction} with a Vitis HLS estimation data`);
 
         const report = this.generateHlsEstimate(topFunction);
 
         this.log(`Generated HLS estimate for task ${task.getName()}`);
-        return report;
+        return { "Vitis": report };
     }
 
     private generateHlsEstimate(topFunction: string): VitisSynReport {

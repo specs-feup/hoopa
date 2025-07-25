@@ -122,7 +122,7 @@ export class HoopaAPI extends AHoopaStage {
 
         const dot = decorator.getDotfile(etg);
         const etgSubdir = `${TaskGraphOutput.ETG_PARENT}/decorated`;
-        this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabel().toLowerCase()}.dot`, etgSubdir);
+        this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
     private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): Cluster {
