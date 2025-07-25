@@ -161,6 +161,11 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private offload(cluster: Cluster, backends: OffloadingBackend[], variant: string): void {
+        if (backends.length === 0) {
+            this.log("No backends to offload to");
+            return;
+        }
+
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         for (const backend of backends) {
             const outDir = `${variant}_${backend.toLowerCase()}`;

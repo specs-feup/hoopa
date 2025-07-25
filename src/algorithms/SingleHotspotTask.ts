@@ -1,18 +1,21 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
-import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
+import { convertTimeUnit, TimeUnit, VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 
 export class SingleHotspotTask extends AHoopaAlgorithm {
     private config: SingleHotspotTaskOptions;
 
     constructor(topFunctionName: string, outputDir: string, appName: string, config: SingleHotspotTaskOptions) {
         super("SingleHotspotTask", topFunctionName, outputDir, appName);
+        if (config.precision === undefined) {
+            config.precision = TimeUnit.MICROSECOND; // Default precision
+        }
         this.config = config;
     }
 
     public run(etg: TaskGraph): Cluster {
-        this.log("Running SingleHotspotTask algorithm");
+        this.log(`Running SingleHotspotTask algorithm with "${this.config.precision}" precision`);
         const tasks = etg.getTasks();
         let currMaxTime = 0;
         let currMaxTask = null;
@@ -23,8 +26,10 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
                 continue;
             }
             const report = task.getAnnotation("Vitis") as VitisSynReport;
-            if (report.execTimeWorst.value > currMaxTime) {
-                currMaxTime = report.execTimeWorst.value;
+            const reportTime = convertTimeUnit(report.execTimeWorst.value, report.execTimeWorst.unit, this.config.precision);
+
+            if (reportTime > currMaxTime) {
+                currMaxTime = reportTime;
                 currMaxTask = task;
             }
         }
@@ -35,11 +40,13 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
 
         const cluster = new Cluster();
         cluster.addTask(currMaxTask);
-        this.log(`Selected task is ${currMaxTask.getName()}, with a predicted execution time of ${currMaxTime}`);
+        this.log(`Selected task is ${currMaxTask.getName()}, with a predicted execution time of ${currMaxTime}${this.config.precision}`);
 
         this.log("SingleHotspotTask algorithm finished");
         return cluster;
     }
 }
 
-export type SingleHotspotTaskOptions = HoopaAlgorithmOptions & {}
+export type SingleHotspotTaskOptions = HoopaAlgorithmOptions & {
+    precision: TimeUnit
+}
