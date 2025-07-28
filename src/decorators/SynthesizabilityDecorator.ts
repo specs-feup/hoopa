@@ -36,7 +36,7 @@ export class SynthesizabilityDecorator extends VitisDecorator {
 
 export class SynthesizabilityDotConverter extends DotConverter {
 
-    public getLabelOfTask(task: RegularTask): string {
+    protected getLabelOfTask(task: RegularTask): string {
         const color = task.getAnnotation("color") as string;
         if (!color) {
             return task.getName();
@@ -45,5 +45,9 @@ export class SynthesizabilityDotConverter extends DotConverter {
         const label = `${task.getName()}
         ${color === "lightgreen" ? "Valid" : "Invalid"}`;
         return label;
+    }
+
+    protected getLabelOfEdge(): string {
+        return "";
     }
 }
