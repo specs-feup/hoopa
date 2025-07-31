@@ -32,6 +32,7 @@ export class HoopaAPI extends AHoopaStage {
 
     public runFromStart(skipCodeFlow: boolean = true): void {
         this.logLine();
+        this.logStart();
         this.log("Running Hoopa for the current AST");
 
         this.log(`Generated ${this.runs.length} run configurations from provided HoopaConfig`);
@@ -58,6 +59,7 @@ export class HoopaAPI extends AHoopaStage {
         }
 
         this.log("Finished running Hoopa for all run configurations");
+        this.logEnd();
         this.logLine();
     }
 
