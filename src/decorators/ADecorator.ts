@@ -16,21 +16,36 @@ export abstract class ADecorator extends AHoopaStage {
         return this.labels;
     }
 
-    public decorate(etg: TaskGraph): [string, { [key: string]: any }][] {
+    public decorate(etg: TaskGraph, uniqueFunctionsOnly: boolean = true): [string, { [key: string]: any }][] {
         this.log(`Decorating ETG with ${this.labels.join(", ")} annotations`);
 
-        const aggregate: [string, { [key: string]: any }][] = [];
+        const annotationsPerTask: [string, { [key: string]: any }][] = [];
+        const annotationsPerFunction: [string, { [key: string]: any }][] = [];
 
         for (const task of etg.getTasksByType(TaskType.REGULAR)) {
-            const annotations = this.getAnnotations(task as RegularTask);
+            let annotations: { [key: string]: any } = {};
+
+            if (uniqueFunctionsOnly) {
+                const functionName = task.getCall()?.function.signature;
+                if (annotationsPerFunction.some(([name, _]) => name === functionName)) {
+                    annotations = annotationsPerFunction.find(([name, _]) => name === functionName)![1];
+                }
+                else {
+                    annotations = this.getAnnotations(task as RegularTask);
+                    annotationsPerFunction.push([functionName!, annotations]);
+                }
+            }
+            else {
+                annotations = this.getAnnotations(task as RegularTask);
+            }
 
             for (const [label, annotation] of Object.entries(annotations)) {
                 task.setAnnotation(label, annotation);
-                aggregate.push([task.getName(), annotations]);
+                annotationsPerTask.push([task.getName(), annotations]);
             }
         }
-        this.log(`Finished decorating ${aggregate.length} tasks with ${this.labels.join(", ")} annotations`);
-        return aggregate;
+        this.log(`Finished decorating ${annotationsPerTask.length} tasks with ${this.labels.join(", ")} annotations`);
+        return annotationsPerTask;
     }
 
     public applyCachedDecorations(etg: TaskGraph, filename: string): void {
