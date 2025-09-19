@@ -14,6 +14,7 @@ import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig
 import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
 import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
+import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -154,6 +155,12 @@ export class HoopaAPI extends AHoopaStage {
                 {
                     const config = options as SingleHotspotTaskOptions;
                     const alg = new SingleHotspotTask(topFunctionName, outputDir, appName, config);
+                    return alg.run(etg);
+                }
+            case HoopaAlgorithm.HOTSPOT_EXPANSION:
+                {
+                    const config = options as HotspotExpansionOptions;
+                    const alg = new HotspotExpansion(topFunctionName, outputDir, appName, config);
                     return alg.run(etg);
                 }
             default:

@@ -28,6 +28,7 @@
     "./TaskGraphDecorator": "./dist/src/HoopaConfig.js",
     "./PredefinedTasksOptions": "./dist/src/algorithms/PredefinedTasks.js",
     "./SingleHotspotTaskOptions": "./dist/src/algorithms/SingleHotspotTask.js",
+    "./HotspotExpansionOptions": "./dist/src/algorithms/HotspotExpansion.js",
     "./BuiltinFpgaPlatforms": "./dist/src/platforms/BuiltinFpgaPlatforms.js",
     "./BuiltinGpuPlatforms": "./dist/src/platforms/BuiltinGpuPlatforms.js"
   },
