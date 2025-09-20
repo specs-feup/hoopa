@@ -17,7 +17,6 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
     public run(etg: TaskGraph): Cluster {
         this.log(`Running HotspotExpansion algorithm with "${this.config.precision}" precision`);
-        const cluster = new Cluster();
 
         const hotspot = this.findHotspotTask(etg);
         if (hotspot[0] === null) {
@@ -27,10 +26,14 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         const hotspotTask = hotspot[0];
         const hotspotTime = hotspot[1];
 
-        cluster.addTask(hotspotTask);
-        this.log(`Selected task is ${hotspotTask.getName()}, with a predicted execution time of ${hotspotTime}${this.config.precision}`);
+        this.log(`Hotspot task is ${hotspotTask.getName()}, with latency ${hotspotTime}${this.config.precision}`);
 
-        this.expandCluster(cluster);
+        const cluster = this.createCluster(hotspotTask);
+
+        this.log(`Final cluster has ${cluster.getTasks().length} tasks:`);
+        cluster.getTasks().forEach((task) => {
+            this.log(` - ${task.getName()}`);
+        });
 
         this.log("HotspotExpansion algorithm finished");
         return cluster;
@@ -54,7 +57,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             }
         }
         if (currMaxTask == null) {
-            this.logError("No tasks with Vitis annotation found, consider applying a Vitis decorator before running the SingleHotspotTask algorithm");
+            this.logError("No tasks with Vitis annotation found, consider applying a Vitis decorator before running the HotspotExpansion algorithm");
             return [null, 0];
         }
         return [currMaxTask, currMaxTime];
@@ -76,8 +79,53 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return convertTimeUnit(report.execTimeWorst.value, report.execTimeWorst.unit, this.config.precision);
     }
 
-    private expandCluster(cluster: Cluster): void {
+    private createCluster(task: ConcreteTask): Cluster {
+        const cluster = new Cluster();
+        cluster.addTask(task);
+        this.log(`Added hotspot task ${task.getName()} to cluster`);
 
+        const parent = task.getHierarchicalParent();
+        if (parent == null) {
+            this.log("No more parent tasks to expand");
+            return cluster;
+        }
+        // if the hier parent is synthesizable, we move up the cluster up one level
+        if (this.isSynthesizable(parent)) {
+            this.log(`Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
+            return this.createCluster(parent);
+        }
+        // else, we try to add siblings at the same hierarchical level
+        else {
+            this.log(`Parent task ${parent.getName()} is not synthesizable, attempting to add siblings`);
+
+            task.getIncomingComm().forEach((comm) => {
+                const sibling = comm.getSource() instanceof ConcreteTask ? comm.getSource() as ConcreteTask : null;
+                if (sibling == null) {
+                    return; // skip non-concrete tasks
+                }
+                if (sibling.getId() === task.getId()) {
+                    return; // skip self
+                }
+                if (this.isSynthesizable(sibling)) {
+                    cluster.addTask(sibling);
+                    this.log(`Added sibling task ${sibling.getName()} to cluster`);
+                }
+            });
+            task.getOutgoingComm().forEach((comm) => {
+                const sibling = comm.getTarget() instanceof ConcreteTask ? comm.getTarget() as ConcreteTask : null;
+                if (sibling == null) {
+                    return; // skip non-concrete tasks
+                }
+                if (sibling.getId() === task.getId()) {
+                    return; // skip self
+                }
+                if (this.isSynthesizable(sibling)) {
+                    cluster.addTask(sibling);
+                    this.log(`Added sibling task ${sibling.getName()} to cluster`);
+                }
+            });
+        }
+        return cluster;
     }
 }
 
