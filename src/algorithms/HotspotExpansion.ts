@@ -12,11 +12,14 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         if (config.precision === undefined) {
             config.precision = TimeUnit.MICROSECOND;
         }
+        if (config.policies === undefined) {
+            config.policies = [];
+        }
         this.config = config;
     }
 
     public run(etg: TaskGraph): Cluster {
-        this.log(`Running HotspotExpansion algorithm with "${this.config.precision}" precision`);
+        this.log(`Running with "${this.config.precision}" precision and policies: ${this.config.policies!.length > 0 ? this.config.policies!.join(", ") : "none"}`);
 
         const hotspot = this.findHotspotTask(etg);
         if (hotspot[0] === null) {
@@ -63,12 +66,47 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return [currMaxTask, currMaxTime];
     }
 
-    private isSynthesizable(task: ConcreteTask): boolean {
+    private isSynthesizable(task: ConcreteTask, policies: HotspotExpansionPolicy[] = []): boolean {
         if (task.getAnnotation("Vitis") == null) {
             return false;
         }
         const report = task.getAnnotation("Vitis") as VitisSynReport;
-        return report.errors.length === 0;
+        if (policies.length === 0) {
+            return report.errors.length === 0;
+        }
+
+        let allClear = true;
+        for (const error of report.errors) {
+            allClear = allClear && this.checkTaskForPolicy(error, policies);
+        }
+        return allClear;
+    }
+
+    private checkTaskForPolicy(error: string, policies: HotspotExpansionPolicy[]): boolean {
+        for (const policy of policies) {
+            switch (policy) {
+                case HotspotExpansionPolicy.ALLOW_MALLOC:
+                    {
+                        if (error.includes("malloc") || error.includes("free")) {
+                            return true;
+                        }
+
+                    }
+                case HotspotExpansionPolicy.ALLOW_INDIRECT_POINTERS:
+                    {
+                        if (error.includes("pointer type")) {
+                            return true;
+                        }
+                    }
+                case HotspotExpansionPolicy.ALLOW_OTHERS:
+                    {
+                        if (!error.includes("malloc") && !error.includes("free") && !error.includes("pointer type")) {
+                            return true;
+                        }
+                    }
+            }
+        }
+        return false;
     }
 
     private getTaskExecTime(task: ConcreteTask): number {
@@ -90,7 +128,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return cluster;
         }
         // if the hier parent is synthesizable, we move up the cluster up one level
-        if (this.isSynthesizable(parent)) {
+        if (this.isSynthesizable(parent, this.config.policies)) {
             this.log(`Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
             return this.createCluster(parent);
         }
@@ -127,8 +165,17 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         }
         return cluster;
     }
+
+
+}
+
+export enum HotspotExpansionPolicy {
+    ALLOW_MALLOC = "ALLOW_MALLOC",
+    ALLOW_INDIRECT_POINTERS = "ALLOW_INDIRECT_POINTERS",
+    ALLOW_OTHERS = "ALLOW_OTHERS"
 }
 
 export type HotspotExpansionOptions = HoopaAlgorithmOptions & {
-    precision: TimeUnit
+    precision: TimeUnit,
+    policies?: HotspotExpansionPolicy[]
 }
