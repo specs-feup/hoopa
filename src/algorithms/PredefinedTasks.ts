@@ -25,6 +25,10 @@ export class PredefinedTasks extends AHoopaAlgorithm {
         this.log("PredefinedTasks algorithm finished");
         return cluster;
     }
+
+    public getName(): string {
+        return `PredefinedTasks_${this.config.taskNames.join("_")}`;
+    }
 }
 
 export type PredefinedTasksOptions = HoopaAlgorithmOptions & {

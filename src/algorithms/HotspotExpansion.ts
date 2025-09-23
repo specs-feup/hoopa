@@ -139,10 +139,10 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             task.getIncomingComm().forEach((comm) => {
                 const sibling = comm.getSource() instanceof ConcreteTask ? comm.getSource() as ConcreteTask : null;
                 if (sibling == null) {
-                    return; // skip non-concrete tasks
+                    return;
                 }
                 if (sibling.getId() === task.getId()) {
-                    return; // skip self
+                    return;
                 }
                 if (this.isSynthesizable(sibling)) {
                     cluster.addTask(sibling);
@@ -152,10 +152,10 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             task.getOutgoingComm().forEach((comm) => {
                 const sibling = comm.getTarget() instanceof ConcreteTask ? comm.getTarget() as ConcreteTask : null;
                 if (sibling == null) {
-                    return; // skip non-concrete tasks
+                    return;
                 }
                 if (sibling.getId() === task.getId()) {
-                    return; // skip self
+                    return;
                 }
                 if (this.isSynthesizable(sibling)) {
                     cluster.addTask(sibling);
@@ -166,7 +166,9 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return cluster;
     }
 
-
+    public getName(): string {
+        return `HotspotExpansion_${this.config.policies?.join("_")}`;;
+    }
 }
 
 export enum HotspotExpansionPolicy {

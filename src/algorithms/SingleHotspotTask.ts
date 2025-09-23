@@ -45,6 +45,10 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.log("SingleHotspotTask algorithm finished");
         return cluster;
     }
+
+    public getName(): string {
+        return `SingleHotspotTask_${this.config.precision}`;
+    }
 }
 
 export type SingleHotspotTaskOptions = HoopaAlgorithmOptions & {

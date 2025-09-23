@@ -9,6 +9,8 @@ export abstract class AHoopaAlgorithm extends AHoopaStage {
     }
 
     public abstract run(etg: TaskGraph): Cluster;
+
+    public abstract getName(): string;
 }
 
 export type HoopaAlgorithmOptions = {}
