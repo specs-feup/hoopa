@@ -12,9 +12,10 @@ import { SingleHotspotTask, SingleHotspotTaskOptions } from "./algorithms/Single
 import { Offloader } from "./Offloader.js";
 import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
 import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
-import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
+import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
 import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
+import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -81,10 +82,19 @@ export class HoopaAPI extends AHoopaStage {
         this.decorate(etg, config.decorators);
 
         this.log("Starting partitioning and optimization algorithm");
-        const cluster = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
+        const [cluster, name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
+
+        this.saveClusterDot(cluster, name);
 
         this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
+    }
+
+    private saveClusterDot(cluster: Cluster, name: string): void {
+        const filename = `cluster_${name}.dot`;
+        const dotConverter = new DotConverter();
+        const dot = dotConverter.convertCluster(cluster);
+        this.saveToFileInSubfolder(dot, filename, "clusters");
     }
 
     private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
@@ -139,34 +149,40 @@ export class HoopaAPI extends AHoopaStage {
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
-    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): Cluster {
+    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): [Cluster, string] {
         const topFunctionName = this.getTopFunctionName();
         const outputDir = this.getOutputDir();
         const appName = this.getAppName();
+        let alg: AHoopaAlgorithm;
 
         switch (algorithm) {
             case HoopaAlgorithm.PREDEFINED_TASKS:
                 {
                     const config = options as PredefinedTasksOptions;
-                    const alg = new PredefinedTasks(topFunctionName, outputDir, appName, config);
-                    return alg.run(etg);
+                    alg = new PredefinedTasks(topFunctionName, outputDir, appName, config);
+                    break;
                 }
             case HoopaAlgorithm.SINGLE_HOTSPOT:
                 {
                     const config = options as SingleHotspotTaskOptions;
-                    const alg = new SingleHotspotTask(topFunctionName, outputDir, appName, config);
-                    return alg.run(etg);
+                    alg = new SingleHotspotTask(topFunctionName, outputDir, appName, config);
+                    break;
                 }
             case HoopaAlgorithm.HOTSPOT_EXPANSION:
                 {
                     const config = options as HotspotExpansionOptions;
-                    const alg = new HotspotExpansion(topFunctionName, outputDir, appName, config);
-                    return alg.run(etg);
+                    alg = new HotspotExpansion(topFunctionName, outputDir, appName, config);
+                    break;
                 }
             default:
-                this.logError(`Unknown algorithm: ${algorithm}`);
-                return new Cluster();
+                {
+                    this.logError(`Unknown algorithm: ${algorithm}`);
+                    return [new Cluster(), "<unknown>"];
+                }
         }
+        const res = alg.run(etg);
+        const name = alg.getName();
+        return [res, name];
     }
 
     private offload(cluster: Cluster, backends: OffloadingBackend[], variant: string): void {
