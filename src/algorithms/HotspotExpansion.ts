@@ -167,7 +167,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     public getName(): string {
-        return `HotspotExpansion_${this.config.policies?.join("_")}`;;
+        return `HotspotExpansion_${this.config.policies?.join("_")}`;
     }
 }
 

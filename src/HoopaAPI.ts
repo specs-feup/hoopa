@@ -15,6 +15,7 @@ import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
 import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
 import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
+import { ClusterDotConverter } from "@specs-feup/extended-task-graph/ClusterDotConverter";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 
 export class HoopaAPI extends AHoopaStage {
@@ -84,16 +85,16 @@ export class HoopaAPI extends AHoopaStage {
         this.log("Starting partitioning and optimization algorithm");
         const [cluster, name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
-        this.saveClusterDot(cluster, name);
+        this.saveClusterDot(cluster, etg, name);
 
         this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
     }
 
-    private saveClusterDot(cluster: Cluster, name: string): void {
-        const filename = `cluster_${name}.dot`;
+    private saveClusterDot(cluster: Cluster, etg: TaskGraph, name: string): void {
+        const filename = `${name}.dot`;
         const dotConverter = new DotConverter();
-        const dot = dotConverter.convertCluster(cluster);
+        const dot = dotConverter.convertCluster(cluster, etg);
         this.saveToFileInSubfolder(dot, filename, "clusters");
     }
 
