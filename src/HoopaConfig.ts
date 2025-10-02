@@ -5,6 +5,11 @@ import { HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { BuiltinFpgaTarget, getFpgaTarget } from "./platforms/BuiltinFpgaPlatforms.js";
 import { BuiltinGpuTarget, getGpuTarget } from "./platforms/BuiltinGpuPlatforms.js";
 
+export const enum HoopaOutputDirectory {
+    DECORATORS = "decorators",
+    CLUSTERS = "clusters"
+}
+
 export const enum TaskGraphDecorator {
     VITIS_HLS = "VitisHLS",
     SYNTHESIZABILITY = "Synthesizability",

@@ -1,6 +1,6 @@
 import { ExtendedTaskGraphAPI } from "@specs-feup/extended-task-graph/ExtendedTaskGraphAPI";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { HoopaAlgorithm, HoopaConfig, HoopaRun, OffloadingBackend, TaskGraphDecorator } from "./HoopaConfig.js";
+import { HoopaAlgorithm, HoopaConfig, HoopaOutputDirectory, HoopaRun, OffloadingBackend, TaskGraphDecorator } from "./HoopaConfig.js";
 import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { ADecorator } from "./decorators/ADecorator.js";
@@ -113,7 +113,8 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        this.applyDecoration(etg, vitisDecorator, "vitis_hls/initial_runs.json");
+                        const path = `${this.getOutputDir()}/${HoopaOutputDirectory.DECORATORS}/initial_runs.json`;
+                        this.applyDecoration(etg, vitisDecorator, path);
                         break;
                     }
                 case TaskGraphDecorator.SYNTHESIZABILITY:
@@ -123,7 +124,8 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        this.applyDecoration(etg, synthDecorator, "vitis_hls/etg_synthesizability.json");
+                        const path = `${this.getOutputDir()}/${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
+                        this.applyDecoration(etg, synthDecorator, path);
                         break;
                     }
                 default:
