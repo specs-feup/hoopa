@@ -113,7 +113,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${this.getOutputDir()}/${HoopaOutputDirectory.DECORATORS}/initial_runs.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/initial_runs.json`;
                         this.applyDecoration(etg, vitisDecorator, path);
                         break;
                     }
@@ -124,7 +124,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${this.getOutputDir()}/${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
                         this.applyDecoration(etg, synthDecorator, path);
                         break;
                     }
