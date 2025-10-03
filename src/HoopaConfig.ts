@@ -13,6 +13,7 @@ export const enum HoopaOutputDirectory {
 export const enum TaskGraphDecorator {
     VITIS_HLS = "VitisHLS",
     SYNTHESIZABILITY = "Synthesizability",
+    PROFILING = "Profiling"
 }
 
 export const enum HoopaAlgorithm {
@@ -69,7 +70,7 @@ DefaultGenFlowConfig.gatherMetrics = false;
 
 export type HoopaRun = {
     variant: string;
-    decorators: TaskGraphDecorator[];
+    decorators: [TaskGraphDecorator, string][];
     algorithm: HoopaAlgorithm;
     algorithmOptions: HoopaAlgorithmOptions;
     backends: OffloadingBackend[];
@@ -79,7 +80,7 @@ export type HoopaRun = {
 export class HoopaConfig {
     private transFlowConfig: TransFlowConfig;
     private genFlowConfig: GenFlowConfig;
-    private decorators: TaskGraphDecorator[];
+    private decorators: [TaskGraphDecorator, string][];
     private backends: OffloadingBackend[];
     private algorithms: HoopaAlgorithm[];
     private algorithmOptions: HoopaAlgorithmOptions[];
@@ -105,8 +106,8 @@ export class HoopaConfig {
         return this;
     }
 
-    public addDecorator(decorator: TaskGraphDecorator): HoopaConfig {
-        this.decorators.push(decorator);
+    public addDecorator(decorator: TaskGraphDecorator, option: string = "<none>"): HoopaConfig {
+        this.decorators.push([decorator, option]);
         return this;
     }
 
@@ -152,7 +153,7 @@ export class HoopaConfig {
         return this.genFlowConfig;
     }
 
-    public getDecorators(): TaskGraphDecorator[] {
+    public getDecorators(): [TaskGraphDecorator, string][] {
         return this.decorators;
     }
 

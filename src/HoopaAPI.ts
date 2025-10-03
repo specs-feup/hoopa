@@ -15,8 +15,8 @@ import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
 import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
 import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
 import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
-import { ClusterDotConverter } from "@specs-feup/extended-task-graph/ClusterDotConverter";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
+import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -98,13 +98,13 @@ export class HoopaAPI extends AHoopaStage {
         this.saveToFileInSubfolder(dot, filename, "clusters");
     }
 
-    private decorate(etg: TaskGraph, decorators: TaskGraphDecorator[]): void {
+    private decorate(etg: TaskGraph, decorators: [TaskGraphDecorator, string][]): void {
         if (decorators.length === 0) {
             this.log("No decorators to apply");
             return;
         }
 
-        for (const decorator of decorators) {
+        for (const [decorator, option] of decorators) {
             switch (decorator) {
                 case TaskGraphDecorator.VITIS_HLS:
                     {
@@ -126,6 +126,19 @@ export class HoopaAPI extends AHoopaStage {
                             "vitis_hls/initial_runs");
                         const path = `${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
                         this.applyDecoration(etg, synthDecorator, path);
+                        break;
+                    }
+                case TaskGraphDecorator.PROFILING:
+                    {
+                        const profilerName = option || "unknown_profiler";
+                        const profilingDecorator = new ProfilingDecorator(
+                            this.getTopFunctionName(),
+                            this.getOutputDir(),
+                            this.getAppName(),
+                            profilerName);
+                        const profName = `${this.getAppName()}_${profilerName}.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/${profName}`;
+                        this.applyDecoration(etg, profilingDecorator, path);
                         break;
                     }
                 default:
