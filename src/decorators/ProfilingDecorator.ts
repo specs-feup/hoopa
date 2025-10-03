@@ -40,7 +40,7 @@ export class ProfilingDecorator extends ADecorator {
 
             task.setAnnotation("profiledExecTime", profData);
         }
-        this.log(`Finished decorating ${decorations.length} tasks with ${this.labels.join(", ")} annotations`);
+        this.log(`Finished decorating ${Object.entries(decorations).length} tasks with ${this.labels.join(", ")} annotations`);
     }
 
     protected getAnnotations(task: RegularTask): { [key: string]: any } {
