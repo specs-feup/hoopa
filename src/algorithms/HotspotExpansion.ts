@@ -4,6 +4,8 @@ import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { convertTimeUnit, TimeUnit, VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 import { HotspotCriterion, SingleHotspotTask, SingleHotspotTaskOptions } from "./SingleHotspotTask.js";
+import { FpgaResourceUsageEstimator } from "./FpgaResourceUsageEstimator.js";
+import { ProfilerData } from "../decorators/ProfilingDecorator.js";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -26,15 +28,11 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     public run(etg: TaskGraph): Cluster {
         this.log(`Running with "${this.config.precision}" precision and policies: ${this.config.policies!.length > 0 ? this.config.policies!.join(", ") : "none"}`);
 
-        const hotspot = this.findHotspotTask(etg);
-        if (hotspot[0] === null) {
+        const [hotspotTask, hotspotValue] = this.findHotspotTask(etg);
+        if (hotspotTask === null) {
             this.logError("No hotspot task found, cannot proceed with HotspotExpansion algorithm");
             return new Cluster();
         }
-        const hotspotTask = hotspot[0];
-        const hotspotTime = hotspot[1];
-
-        this.log(`Hotspot task is ${hotspotTask.getName()}, with latency ${hotspotTime}${this.config.precision}`);
 
         const cluster = this.createCluster(hotspotTask);
 
@@ -60,18 +58,19 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return [hotspotTask, hotspotValue];
         }
 
-        switch (this.config.hotspotCriterion) {
+        const criterion = this.config.hotspotCriterion!;
+        switch (criterion) {
             case HotspotCriterion.LATENCY:
-                [hotspotTask, hotspotValue] = this.getHotspotOnLatency(etg);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
                 this.log(`Hotspot task selected based on LATENCY criterion: ${hotspotTask?.getName()} at ${hotspotValue}${this.config.precision}`);
                 break;
             case HotspotCriterion.RESOURCES:
-                [hotspotTask, hotspotValue] = this.getHotspotOnResources(etg);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
                 this.log(`Hotspot task selected based on RESOURCES criterion: ${hotspotTask?.getName()} with ${hotspotValue} resources`);
                 break;
             case HotspotCriterion.COMPUTATION_PERCENTAGE:
-                [hotspotTask, hotspotValue] = this.getHotspotOnPercentage(etg);
-                this.log(`Hotspot task selected based on COMPUTATION_PERCENTAGE criterion: ${hotspotTask?.getName()} at ${hotspotValue}${this.config.precision}`);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
+                this.log(`Hotspot task selected based on COMPUTATION_PERCENTAGE criterion: ${hotspotTask?.getName()} at ${hotspotValue}%`);
                 break;
             default:
                 this.logError(`Unknown hotspot criterion: ${this.config.hotspotCriterion}`);
@@ -94,52 +93,17 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return [task, this.getTaskExecTime(task)];
     }
 
-    private getHotspotOnLatency(etg: TaskGraph): [ConcreteTask | null, number] {
-        let currMaxTask: ConcreteTask | null = null;
-        let currMaxValue = -1;
-
-        for (const task of etg.getTasks()) {
-            const execTime = this.getTaskExecTime(task);
-            if (execTime > currMaxValue) {
-                currMaxValue = execTime;
-                currMaxTask = task;
-            }
-        }
-        return [currMaxTask, currMaxValue];
-    }
-
-    private getHotspotOnResources(etg: TaskGraph): [ConcreteTask | null, number] {
-        let currMaxTask: ConcreteTask | null = null;
-        let currMaxValue = -1;
-
-        for (const task of etg.getTasks()) {
-            if (task.getAnnotation("Vitis") == null) {
-                continue;
-            }
-            const report = task.getAnnotation("Vitis") as VitisSynReport;
-            const totalResources = report.LUT + report.FF + report.BRAM + report.DSP;
-            if (totalResources > currMaxValue) {
-                currMaxValue = totalResources;
-                currMaxTask = task;
-            }
-        }
-        return [currMaxTask, currMaxValue];
-    }
-
-    private getHotspotOnPercentage(etg: TaskGraph): [ConcreteTask | null, number] {
-        let currMaxTask: ConcreteTask | null = null;
-        let currMaxValue = -1;
-
-        if (this.config.profiler === undefined) {
-            this.logError("No profiler specified for COMPUTATION_PERCENTAGE hotspot criterion");
+    private getHotspotDynamic(etg: TaskGraph, criterion: HotspotCriterion): [ConcreteTask | null, number] {
+        if (criterion == HotspotCriterion.COMPUTATION_PERCENTAGE && this.config.profiler === undefined) {
+            this.logError(`No profiler specified for ${HotspotCriterion.COMPUTATION_PERCENTAGE} hotspot criterion`);
             return [null, 0];
         }
-        const profiler = this.config.profiler;
+        const profiler = this.config.profiler || "<n/a>";
 
         const topFunction = this.getTopFunctionName();
         const outDir = this.getOutputDir();
         const appName = this.getAppName();
-        const algConfig = { criterion: HotspotCriterion.COMPUTATION_PERCENTAGE, profiler: profiler } as SingleHotspotTaskOptions;
+        const algConfig = { criterion: criterion, profiler: profiler } as SingleHotspotTaskOptions;
 
         const alg = new SingleHotspotTask(topFunction, outDir, appName, algConfig);
         const result = alg.run(etg);
@@ -147,10 +111,21 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             this.logError("SingleHotspotTask algorithm did not return any hotspot task");
             return [null, 0];
         }
-        currMaxTask = result.getTasks()[0];
-        currMaxValue = this.getTaskExecTime(currMaxTask);
 
-        return [currMaxTask, currMaxValue];
+        const hotspotTask = result.getTasks()[0];
+        let hotspotValue = -1;
+        switch (criterion) {
+            case HotspotCriterion.LATENCY:
+                hotspotValue = this.getTaskExecTime(hotspotTask);
+                break;
+            case HotspotCriterion.RESOURCES:
+                hotspotValue = this.getTaskResourceUsage(hotspotTask);
+                break;
+            case HotspotCriterion.COMPUTATION_PERCENTAGE:
+                hotspotValue = this.getTaskComputationPercentage(hotspotTask, profiler);
+                break;
+        }
+        return [hotspotTask, hotspotValue];
     }
 
     private isSynthesizable(task: ConcreteTask, policies: HotspotExpansionPolicy[] = []): boolean {
@@ -202,6 +177,26 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         }
         const report = task.getAnnotation("Vitis") as VitisSynReport;
         return convertTimeUnit(report.execTimeWorst.value, report.execTimeWorst.unit, this.config.precision);
+    }
+
+    private getTaskResourceUsage(task: ConcreteTask): number {
+        if (task.getAnnotation("Vitis") == null) {
+            return 0;
+        }
+        const report = task.getAnnotation("Vitis") as VitisSynReport;
+        return FpgaResourceUsageEstimator.estimateUsage(report);
+    }
+
+    private getTaskComputationPercentage(task: ConcreteTask, profiler: string): number {
+        const allProfiles = task.getAnnotation("profiledExecTime") as ProfilerData[];
+        if (!allProfiles) {
+            return 0;
+        }
+        const thisProfile = allProfiles.find(p => p.profiler === profiler);
+        if (!thisProfile) {
+            return 0;
+        }
+        return thisProfile.percentage;
     }
 
     private createCluster(task: ConcreteTask): Cluster {
