@@ -4,6 +4,7 @@ import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { convertTimeUnit, TimeUnit, VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 import { ProfilerData } from "../decorators/ProfilingDecorator.js";
+import { FpgaResourceUsageEstimator } from "./FpgaResourceUsageEstimator.js";
 
 export class SingleHotspotTask extends AHoopaAlgorithm {
     public static readonly DEFAULT_PRECISION = TimeUnit.MICROSECOND;
@@ -71,8 +72,8 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
     }
 
     private getResourceUsage(report: VitisSynReport): number {
-        // TODO: assign weights to each component, which may even be user-defined
-        return report.LUT + report.FF + report.BRAM + report.DSP;
+        const usage = FpgaResourceUsageEstimator.estimateUsage(report);
+        return usage;
     }
 
     private selectOnFpgaProperty(tasks: ConcreteTask[], useResources: boolean = false): ConcreteTask | null {
