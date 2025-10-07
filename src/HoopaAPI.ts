@@ -86,6 +86,7 @@ export class HoopaAPI extends AHoopaStage {
         const [cluster, name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
         this.saveClusterDot(cluster, etg, name);
+        this.saveClusterData(cluster, name);
 
         this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
@@ -96,6 +97,10 @@ export class HoopaAPI extends AHoopaStage {
         const dotConverter = new DotConverter();
         const dot = dotConverter.convertCluster(cluster, etg);
         this.saveToFileInSubfolder(dot, filename, "clusters");
+    }
+
+    private saveClusterData(cluster: Cluster, name: string): void {
+
     }
 
     private decorate(etg: TaskGraph, decorators: [TaskGraphDecorator, string][]): void {

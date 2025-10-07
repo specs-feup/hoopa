@@ -49,11 +49,15 @@ export abstract class ADecorator extends AHoopaStage {
     }
 
     public applyCachedDecorations(etg: TaskGraph, filename: string): void {
-        this.log(`Applying cached ${this.labels.join(", ")} decorations from ${filename}`);
+        this.log(`Applying cached ${this.labels.join(", ")} decorations from ${filename.split("/").pop()}`);
 
         const decorations = Io.readJson(filename);
         for (const [taskName, annotations] of decorations) {
-            const task = etg.getTaskByName(taskName)!;
+            const task = etg.getTaskByName(taskName);
+
+            if (!task) {
+                continue;
+            }
 
             for (const [label, annotation] of Object.entries(annotations)) {
                 task.setAnnotation(label, annotation);

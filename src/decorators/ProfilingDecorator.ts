@@ -18,7 +18,7 @@ export class ProfilingDecorator extends ADecorator {
     }
 
     public applyCachedDecorations(etg: TaskGraph, filename: string): void {
-        this.log(`Applying cached ${this.labels.join(", ")} decorations from ${filename}`);
+        this.log(`Applying cached ${this.labels.join(", ")} decorations from ${filename.split("/").pop()}`);
 
         const decorations = Io.readJson(filename) as Record<string, number>;
         for (const [taskName, percentage] of Object.entries(decorations)) {

@@ -21,7 +21,6 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
     public run(etg: TaskGraph): Cluster {
         this.log(`Running SingleHotspotTask algorithm with "${this.config.precision}" precision`);
         const tasks = etg.getTasks();
-        let currMaxTime = 0;
         let currMaxTask = null;
 
         switch (this.config.criterion) {
@@ -51,7 +50,16 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
     }
 
     public getName(): string {
-        return `SingleHotspotTask_${this.config.precision}`;
+        switch (this.config.criterion) {
+            case HotspotCriterion.LATENCY:
+                return `SingleHotspotTask-Latency-${this.config.precision}`;
+            case HotspotCriterion.RESOURCES:
+                return "SingleHotspotTask-Resources";
+            case HotspotCriterion.COMPUTATION_PERCENTAGE:
+                return `SingleHotspotTask-ComputationPercentage-${this.config.profiler}-Target${this.config.percentageTarget}`;
+            default:
+                return "SingleHotspotTask-UnknownCriterion";
+        }
     }
 
     private selectOnLatency(tasks: ConcreteTask[]): ConcreteTask | null {
@@ -130,7 +138,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         }
 
         if (closestTask) {
-            this.log(`Selected task ${closestTask.getName()} with computation percentage ${currPercentage.toFixed(2)}% (target was ${target}%)`);
+            this.log(`Selected task ${closestTask.getName()} with ${currPercentage.toFixed(2)}% (target ${target}%, profiler ${this.config.profiler})`);
         } else {
             this.logError("No tasks with the specified profiler annotation found, cannot select hotspot task based on computation percentage");
         }
