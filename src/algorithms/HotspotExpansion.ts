@@ -35,14 +35,31 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         }
 
         const cluster = this.createClusterInward(hotspotTask);
+        const clusterValue = this.getClusterValue(cluster);
 
         this.log(`Final cluster has ${cluster.getTasks().length} tasks:`);
         cluster.getTasks().forEach((task) => {
             this.log(` - ${task.getName()}`);
         });
+        this.log(`Cluster total value: ${this.getValueWithUnit(clusterValue)}`);
+        this.log(`Hotspot task "${hotspotTask.getName()}" value: ${this.getValueWithUnit(hotspotValue)}`);
+        this.log(`Cluster represents ${(clusterValue / hotspotValue * 100).toFixed(2)}% of the hotspot task value`);
 
         this.log("HotspotExpansion algorithm finished");
         return cluster;
+    }
+
+    private getValueWithUnit(value: number): string {
+        switch (this.config.hotspotCriterion) {
+            case HotspotCriterion.LATENCY:
+                return `${value}${this.config.precision}`;
+            case HotspotCriterion.RESOURCES:
+                return `${value}% resource usage`;
+            case HotspotCriterion.COMPUTATION_PERCENTAGE:
+                return `${value}% of total computation`;
+            default:
+                return `${value} (unknown unit)`;
+        }
     }
 
     private findHotspotTask(etg: TaskGraph): [ConcreteTask | null, number] {
@@ -61,15 +78,15 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         const criterion = this.config.hotspotCriterion!;
         switch (criterion) {
             case HotspotCriterion.LATENCY:
-                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg);
                 this.log(`Hotspot task selected based on LATENCY criterion: ${hotspotTask?.getName()} at ${hotspotValue}${this.config.precision}`);
                 break;
             case HotspotCriterion.RESOURCES:
-                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg);
                 this.log(`Hotspot task selected based on RESOURCES criterion: ${hotspotTask?.getName()} with ${hotspotValue} resources`);
                 break;
             case HotspotCriterion.COMPUTATION_PERCENTAGE:
-                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg, criterion);
+                [hotspotTask, hotspotValue] = this.getHotspotDynamic(etg);
                 this.log(`Hotspot task selected based on COMPUTATION_PERCENTAGE criterion: ${hotspotTask?.getName()} at ${hotspotValue}%`);
                 break;
             default:
@@ -93,7 +110,8 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return [task, this.getTaskLatency(task)];
     }
 
-    private getHotspotDynamic(etg: TaskGraph, criterion: HotspotCriterion): [ConcreteTask | null, number] {
+    private getHotspotDynamic(etg: TaskGraph): [ConcreteTask | null, number] {
+        const criterion = this.config.hotspotCriterion!;
         if (criterion == HotspotCriterion.COMPUTATION_PERCENTAGE && this.config.profiler === undefined) {
             this.logError(`No profiler specified for ${HotspotCriterion.COMPUTATION_PERCENTAGE} hotspot criterion`);
             return [null, 0];
@@ -113,19 +131,26 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         }
 
         const hotspotTask = result.getTasks()[0];
-        let hotspotValue = -1;
+        const hotspotValue = this.getTaskValue(hotspotTask,);
+        return [hotspotTask, hotspotValue];
+    }
+
+    private getTaskValue(task: ConcreteTask): number {
+        const criterion = this.config.hotspotCriterion!;
         switch (criterion) {
             case HotspotCriterion.LATENCY:
-                hotspotValue = this.getTaskLatency(hotspotTask);
-                break;
+                return this.getTaskLatency(task);
             case HotspotCriterion.RESOURCES:
-                hotspotValue = this.getTaskResourceUsage(hotspotTask);
-                break;
+                return this.getTaskResourceUsage(task);
             case HotspotCriterion.COMPUTATION_PERCENTAGE:
-                hotspotValue = this.getTaskComputationPercentage(hotspotTask, profiler);
-                break;
+                return this.getTaskComputationPercentage(task, this.config.profiler!);
+            default:
+                return 0;
         }
-        return [hotspotTask, hotspotValue];
+    }
+
+    private getClusterValue(cluster: Cluster): number {
+        return cluster.getTasks().reduce((sum, task) => sum + this.getTaskValue(task), 0);
     }
 
     private isSynthesizable(task: ConcreteTask, policies: HotspotExpansionPolicy[] = []): boolean {
@@ -216,10 +241,10 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     private compareClusters(c1: Cluster, c2: Cluster): Cluster {
-        if (c1.getTasks().length >= c2.getTasks().length) {
-            return c1;
-        }
-        return c2;
+        const sumC1 = this.getClusterValue(c1);
+        const sumC2 = this.getClusterValue(c2);
+
+        return sumC1 >= sumC2 ? c1 : c2;
     }
 
     private createClusterInward(task: ConcreteTask): Cluster {
