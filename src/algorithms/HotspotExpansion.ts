@@ -34,7 +34,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return new Cluster();
         }
 
-        const cluster = this.createCluster(hotspotTask);
+        const cluster = this.createClusterInward(hotspotTask);
 
         this.log(`Final cluster has ${cluster.getTasks().length} tasks:`);
         cluster.getTasks().forEach((task) => {
@@ -199,24 +199,73 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return thisProfile.percentage;
     }
 
-    private createCluster(task: ConcreteTask): Cluster {
+    private getLeafTasks(topLevel: ConcreteTask): ConcreteTask[] {
+        const leaves: ConcreteTask[] = [];
+
+        if (topLevel.getHierarchicalChildren().length === 0) {
+            leaves.push(topLevel);
+            return leaves;
+        }
+
+        for (const child of topLevel.getHierarchicalChildren()) {
+            const childLeaves = this.getLeafTasks(child);
+            leaves.push(...childLeaves);
+        }
+        return leaves;
+    }
+
+    private compareClusters(c1: Cluster, c2: Cluster): Cluster {
+        if (c1.getTasks().length >= c2.getTasks().length) {
+            return c1;
+        }
+        return c2;
+    }
+
+    private createClusterInward(task: ConcreteTask): Cluster {
+        if (this.isSynthesizable(task, this.config.policies)) {
+            this.log(`Task ${task.getName()} is synthesizable, creating cluster`);
+            const cluster = new Cluster();
+            cluster.addTask(task);
+            return cluster;
+        }
+
+        const leafTasks = this.getLeafTasks(task);
+        const validLeafTasks = leafTasks.filter(t => this.isSynthesizable(t, this.config.policies));
+        if (validLeafTasks.length === 0) {
+            this.logError(`No synthesizable leaf tasks found under task ${task.getName()}, cannot create cluster`);
+            return new Cluster();
+        }
+
+        const clusters = validLeafTasks.map(t => {
+            this.log(`Creating cluster starting from leaf task ${t.getName()}`);
+            const cluster = this.createClusterOutward(t);
+            this.log(`Created cluster with ${cluster.getTasks().length} tasks starting from leaf task ${t.getName()}`);
+            return cluster;
+        });
+        this.log(`Created ${clusters.length} clusters from ${validLeafTasks.length} valid leaf tasks`);
+
+        const largestCluster = clusters.reduce((prev, current) => this.compareClusters(prev, current));
+        return largestCluster;
+    }
+
+    private createClusterOutward(task: ConcreteTask): Cluster {
         const cluster = new Cluster();
         cluster.addTask(task);
-        this.log(`Added hotspot task ${task.getName()} to cluster`);
+        this.log(` - Added task ${task.getName()} to cluster`);
 
         const parent = task.getHierarchicalParent();
         if (parent == null) {
-            this.log("No more parent tasks to expand");
+            this.log(" - No more parent tasks to expand");
             return cluster;
         }
         // if the hier parent is synthesizable, we move up the cluster up one level
         if (this.isSynthesizable(parent, this.config.policies)) {
-            this.log(`Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
-            return this.createCluster(parent);
+            this.log(` - Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
+            return this.createClusterOutward(parent);
         }
         // else, we try to add siblings at the same hierarchical level
         else {
-            this.log(`Parent task ${parent.getName()} is not synthesizable, attempting to add siblings`);
+            this.log(` - Parent task ${parent.getName()} is not synthesizable, checking siblings`);
 
             task.getIncomingComm().forEach((comm) => {
                 const sibling = comm.getSource() instanceof ConcreteTask ? comm.getSource() as ConcreteTask : null;
@@ -228,7 +277,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                 }
                 if (this.isSynthesizable(sibling)) {
                     cluster.addTask(sibling);
-                    this.log(`Added sibling task ${sibling.getName()} to cluster`);
+                    this.log(` - Added sibling task ${sibling.getName()} to cluster`);
                 }
             });
             task.getOutgoingComm().forEach((comm) => {
@@ -241,7 +290,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                 }
                 if (this.isSynthesizable(sibling)) {
                     cluster.addTask(sibling);
-                    this.log(`Added sibling task ${sibling.getName()} to cluster`);
+                    this.log(` - Added sibling task ${sibling.getName()} to cluster`);
                 }
             });
         }
