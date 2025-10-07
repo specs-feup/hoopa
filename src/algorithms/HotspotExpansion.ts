@@ -133,8 +133,9 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return false;
         }
         const report = task.getAnnotation("Vitis") as VitisSynReport;
+
         if (policies.length === 0) {
-            return report.errors.length === 0;
+            return report.valid;
         }
 
         let allClear = true;
