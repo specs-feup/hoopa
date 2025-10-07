@@ -90,7 +90,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             this.logError(`Could not find task with name ${name}`);
             return [null, 0];
         }
-        return [task, this.getTaskExecTime(task)];
+        return [task, this.getTaskLatency(task)];
     }
 
     private getHotspotDynamic(etg: TaskGraph, criterion: HotspotCriterion): [ConcreteTask | null, number] {
@@ -116,7 +116,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         let hotspotValue = -1;
         switch (criterion) {
             case HotspotCriterion.LATENCY:
-                hotspotValue = this.getTaskExecTime(hotspotTask);
+                hotspotValue = this.getTaskLatency(hotspotTask);
                 break;
             case HotspotCriterion.RESOURCES:
                 hotspotValue = this.getTaskResourceUsage(hotspotTask);
@@ -172,7 +172,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return false;
     }
 
-    private getTaskExecTime(task: ConcreteTask): number {
+    private getTaskLatency(task: ConcreteTask): number {
         if (task.getAnnotation("Vitis") == null) {
             return 0;
         }
