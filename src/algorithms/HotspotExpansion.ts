@@ -292,33 +292,38 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         // else, we try to add siblings at the same hierarchical level
         else {
             this.log(` - Parent task ${parent.getName()} is not synthesizable, checking siblings`);
+            const siblings = parent.getHierarchicalChildren().filter(t => t.getId() !== task.getId());
+            const noChangeLimit = siblings.length + 1;
+            let noChangeCount = 0;
 
-            task.getIncomingComm().forEach((comm) => {
-                const sibling = comm.getSource() instanceof ConcreteTask ? comm.getSource() as ConcreteTask : null;
-                if (sibling == null) {
-                    return;
+            while (noChangeCount < noChangeLimit) {
+                const nextTask = siblings.shift()!;
+                if (nextTask === undefined) {
+                    break;
                 }
-                if (sibling.getId() === task.getId()) {
-                    return;
+                // task is already in cluster
+                if (cluster.hasTask(nextTask)) {
+                    continue;
                 }
-                if (this.isSynthesizable(sibling)) {
-                    cluster.addTask(sibling);
-                    this.log(` - Added sibling task ${sibling.getName()} to cluster`);
+                // task is not synthesizable, and it can never be added
+                if (!this.isSynthesizable(nextTask, this.config.policies)) {
+                    continue;
                 }
-            });
-            task.getOutgoingComm().forEach((comm) => {
-                const sibling = comm.getTarget() instanceof ConcreteTask ? comm.getTarget() as ConcreteTask : null;
-                if (sibling == null) {
-                    return;
+                else {
+                    // task is synthesizable, we try to add it
+                    if (cluster.canAdd(nextTask)) {
+                        cluster.addTask(nextTask);
+                        this.log(` - Added sibling task ${nextTask.getName()} to cluster`);
+                        noChangeCount = 0;
+                    }
+                    // if we cannot add it, we may need to wait for other siblings to be added first
+                    // we put it back at the end of the list, and hope it can be added later
+                    else {
+                        noChangeCount++;
+                        siblings.push(task);
+                    }
                 }
-                if (sibling.getId() === task.getId()) {
-                    return;
-                }
-                if (this.isSynthesizable(sibling)) {
-                    cluster.addTask(sibling);
-                    this.log(` - Added sibling task ${sibling.getName()} to cluster`);
-                }
-            });
+            };
         }
         return cluster;
     }
