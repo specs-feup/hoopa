@@ -25,13 +25,13 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): Cluster {
+    public run(etg: TaskGraph): [Cluster, object] {
         this.log(`Running with "${this.config.precision}" precision and policies: ${this.config.policies!.length > 0 ? this.config.policies!.join(", ") : "none"}`);
 
         const [hotspotTask, hotspotValue] = this.findHotspotTask(etg);
         if (hotspotTask === null) {
             this.logError("No hotspot task found, cannot proceed with HotspotExpansion algorithm");
-            return new Cluster();
+            return [new Cluster(), {}];
         }
 
         const cluster = this.createClusterInward(hotspotTask);
@@ -45,8 +45,43 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         this.log(`Hotspot task "${hotspotTask.getName()}" value: ${this.getValueWithUnit(hotspotValue)}`);
         this.log(`Cluster represents ${(clusterValue / hotspotValue * 100).toFixed(2)}% of the hotspot task value`);
 
+        const report = this.createReport(cluster, hotspotTask, hotspotValue);
+
         this.log("HotspotExpansion algorithm finished");
-        return cluster;
+        return [cluster, report];
+    }
+
+    private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): object {
+        const report = {
+            hotspot: {
+                name: hotspotTask.getName(),
+                value: hotspotValue,
+                criterion: this.config.hotspotCriterion
+            },
+            cluster: {
+                name: cluster.getName(),
+                nTopLevelTasks: cluster.getTasks().length,
+                nAllTasks: cluster.getAllTasks().length,
+                value: this.getClusterValue(cluster),
+                criterion: this.config.hotspotCriterion,
+                percentageOfHotspot: (this.getClusterValue(cluster) / hotspotValue * 100).toFixed(2),
+                topLevelTasks: cluster.getTasks().map(t => ({
+                    name: t.getName(),
+                    value: this.getTaskValue(t),
+                })),
+                allTasks: cluster.getTasks().map(t => ({
+                    name: t.getName(),
+                    value: this.getTaskValue(t),
+                    criterion: this.config.hotspotCriterion
+                }))
+            },
+            algorithm: {
+                name: this.getName(),
+                policies: this.config.policies,
+                precision: this.config.precision
+            }
+        };
+        return report;
     }
 
     private getValueWithUnit(value: number): string {
@@ -124,7 +159,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         const algConfig = { criterion: criterion, profiler: profiler } as SingleHotspotTaskOptions;
 
         const alg = new SingleHotspotTask(topFunction, outDir, appName, algConfig);
-        const result = alg.run(etg);
+        const [result, _] = alg.run(etg);
         if (result.getTasks().length === 0) {
             this.logError("SingleHotspotTask algorithm did not return any hotspot task");
             return [null, 0];

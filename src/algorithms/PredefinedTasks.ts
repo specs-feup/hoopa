@@ -11,7 +11,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): Cluster {
+    public run(etg: TaskGraph): [Cluster, object] {
         this.log("Running PredefinedTasks algorithm");
         const cluster = new Cluster();
 
@@ -23,7 +23,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
             }
         }
         this.log("PredefinedTasks algorithm finished");
-        return cluster;
+        return [cluster, {}];
     }
 
     public getName(): string {

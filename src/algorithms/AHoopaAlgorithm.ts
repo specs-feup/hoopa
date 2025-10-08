@@ -8,7 +8,7 @@ export abstract class AHoopaAlgorithm extends AHoopaStage {
         super(`Alg-${algorithmName}`, topFunctionName, outputDir, appName);
     }
 
-    public abstract run(etg: TaskGraph): Cluster;
+    public abstract run(etg: TaskGraph): [Cluster, object];
 
     public abstract getName(): string;
 }

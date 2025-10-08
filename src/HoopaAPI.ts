@@ -83,10 +83,10 @@ export class HoopaAPI extends AHoopaStage {
         this.decorate(etg, config.decorators);
 
         this.log("Starting partitioning and optimization algorithm");
-        const [cluster, name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
+        const [[cluster, report], name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
         this.saveClusterDot(cluster, etg, name);
-        this.saveClusterData(cluster, name);
+        this.saveClusterData(report, name);
 
         this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
@@ -96,11 +96,15 @@ export class HoopaAPI extends AHoopaStage {
         const filename = `${name}.dot`;
         const dotConverter = new DotConverter();
         const dot = dotConverter.convertCluster(cluster, etg);
-        this.saveToFileInSubfolder(dot, filename, "clusters");
+        this.saveToFileInSubfolder(dot, filename, HoopaOutputDirectory.CLUSTERS);
+        this.log(`Saved cluster dot to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
     }
 
-    private saveClusterData(cluster: Cluster, name: string): void {
-
+    private saveClusterData(cluster: object, name: string): void {
+        const filename = `${name}_data.json`;
+        const json = JSON.stringify(cluster, null, 4);
+        this.saveToFileInSubfolder(json, filename, HoopaOutputDirectory.CLUSTERS);
+        this.log(`Saved cluster data to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
     }
 
     private decorate(etg: TaskGraph, decorators: [TaskGraphDecorator, string][]): void {
@@ -170,7 +174,7 @@ export class HoopaAPI extends AHoopaStage {
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
-    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): [Cluster, string] {
+    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): [[Cluster, object], string] {
         const topFunctionName = this.getTopFunctionName();
         const outputDir = this.getOutputDir();
         const appName = this.getAppName();
@@ -198,7 +202,7 @@ export class HoopaAPI extends AHoopaStage {
             default:
                 {
                     this.logError(`Unknown algorithm: ${algorithm}`);
-                    return [new Cluster(), "<unknown>"];
+                    return [[new Cluster(), {}], "<unknown>"];
                 }
         }
         const res = alg.run(etg);

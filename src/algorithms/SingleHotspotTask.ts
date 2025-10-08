@@ -19,7 +19,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): Cluster {
+    public run(etg: TaskGraph): [Cluster, object] {
         this.log(`Running SingleHotspotTask algorithm with "${this.config.precision}" precision`);
         const tasks = etg.getTasks();
         let currMaxTask = null;
@@ -36,10 +36,10 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
                 break;
             default:
                 this.logError(`Unknown hotspot criterion: ${this.config.criterion}`);
-                return new Cluster();
+                return [new Cluster(), {}];
         }
         if (currMaxTask == null) {
-            return new Cluster();
+            return [new Cluster(), {}];
         }
 
         const cluster = new Cluster();
@@ -47,7 +47,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.log(`Created cluster with single hotspot task: ${currMaxTask.getName()}`);
 
         this.log("SingleHotspotTask algorithm finished");
-        return cluster;
+        return [cluster, {}];
     }
 
     public getName(): string {
