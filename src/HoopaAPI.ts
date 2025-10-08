@@ -12,7 +12,7 @@ import { SingleHotspotTask, SingleHotspotTaskOptions } from "./algorithms/Single
 import { Offloader } from "./Offloader.js";
 import { TransFlowConfig } from "@specs-feup/extended-task-graph/TransFlowConfig";
 import { GenFlowConfig } from "@specs-feup/extended-task-graph/GenFlowConfig";
-import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./algorithms/AHoopaAlgorithm.js";
+import { AHoopaAlgorithm, HoopaAlgorithmOptions, HoopaAlgorithmReport } from "./algorithms/AHoopaAlgorithm.js";
 import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorator.js";
 import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
@@ -83,10 +83,10 @@ export class HoopaAPI extends AHoopaStage {
         this.decorate(etg, config.decorators);
 
         this.log("Starting partitioning and optimization algorithm");
-        const [[cluster, report], name] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
+        const [cluster, report] = this.runHoopaAlgorithm(etg, config.algorithm, config.algorithmOptions);
 
-        this.saveClusterDot(cluster, etg, name);
-        this.saveClusterData(report, name);
+        this.saveClusterDot(cluster, etg, report.id);
+        this.saveClusterData(report);
 
         this.log("Starting offloading");
         this.offload(cluster, config.backends, config.variant);
@@ -100,8 +100,9 @@ export class HoopaAPI extends AHoopaStage {
         this.log(`Saved cluster dot to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
     }
 
-    private saveClusterData(cluster: object, name: string): void {
-        const filename = `${name}_data.json`;
+    private saveClusterData(cluster: HoopaAlgorithmReport): void {
+        const id = cluster.id || "unknown";
+        const filename = `${id}_data.json`;
         const json = JSON.stringify(cluster, null, 4);
         this.saveToFileInSubfolder(json, filename, HoopaOutputDirectory.CLUSTERS);
         this.log(`Saved cluster data to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
@@ -174,7 +175,7 @@ export class HoopaAPI extends AHoopaStage {
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
-    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): [[Cluster, object], string] {
+    private runHoopaAlgorithm(etg: TaskGraph, algorithm: HoopaAlgorithm, options: HoopaAlgorithmOptions): [Cluster, HoopaAlgorithmReport] {
         const topFunctionName = this.getTopFunctionName();
         const outputDir = this.getOutputDir();
         const appName = this.getAppName();
@@ -202,12 +203,10 @@ export class HoopaAPI extends AHoopaStage {
             default:
                 {
                     this.logError(`Unknown algorithm: ${algorithm}`);
-                    return [[new Cluster(), {}], "<unknown>"];
+                    return [new Cluster(), { id: "<unknown>" } as HoopaAlgorithmReport];
                 }
         }
-        const res = alg.run(etg);
-        const name = alg.getName();
-        return [res, name];
+        return alg.run(etg);
     }
 
     private offload(cluster: Cluster, backends: OffloadingBackend[], variant: string): void {

@@ -1,5 +1,5 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmOptions, HoopaAlgorithmReport } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { convertTimeUnit, TimeUnit, VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
@@ -25,13 +25,13 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): [Cluster, object] {
+    public run(etg: TaskGraph): [Cluster, HoopaAlgorithmReport] {
         this.log(`Running with "${this.config.precision}" precision and policies: ${this.config.policies!.length > 0 ? this.config.policies!.join(", ") : "none"}`);
 
         const [hotspotTask, hotspotValue] = this.findHotspotTask(etg);
         if (hotspotTask === null) {
             this.logError("No hotspot task found, cannot proceed with HotspotExpansion algorithm");
-            return [new Cluster(), {}];
+            return [new Cluster(), { id: this.getName() }];
         }
 
         const cluster = this.createClusterInward(hotspotTask);
@@ -51,19 +51,24 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return [cluster, report];
     }
 
-    private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): object {
-        const report = {
+    public getName(): string {
+        return `HotspotExpansion_${this.config.hotspotCriterion}_${this.config.policies?.join("_")}`;
+    }
+
+    private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): HotspotExpansionReport {
+        const report: HotspotExpansionReport = {
+            id: this.getName(),
             hotspot: {
                 name: hotspotTask.getName(),
                 value: hotspotValue,
-                criterion: this.config.hotspotCriterion
+                criterion: this.config.hotspotCriterion!
             },
             cluster: {
                 name: cluster.getName(),
                 nTopLevelTasks: cluster.getTasks().length,
                 nAllTasks: cluster.getAllTasks().length,
                 value: this.getClusterValue(cluster),
-                criterion: this.config.hotspotCriterion,
+                criterion: this.config.hotspotCriterion!,
                 percentageOfHotspot: (this.getClusterValue(cluster) / hotspotValue * 100).toFixed(2),
                 topLevelTasks: cluster.getTasks().map(t => ({
                     name: t.getName(),
@@ -72,11 +77,10 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                 allTasks: cluster.getTasks().map(t => ({
                     name: t.getName(),
                     value: this.getTaskValue(t),
-                    criterion: this.config.hotspotCriterion
+                    criterion: this.config.hotspotCriterion!
                 }))
             },
             algorithm: {
-                name: this.getName(),
                 policies: this.config.policies,
                 precision: this.config.precision
             }
@@ -362,10 +366,6 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         }
         return cluster;
     }
-
-    public getName(): string {
-        return `HotspotExpansion_${this.config.policies?.join("_")}`;
-    }
 }
 
 export enum HotspotExpansionPolicy {
@@ -380,4 +380,26 @@ export type HotspotExpansionOptions = HoopaAlgorithmOptions & {
     profiler?: string,
     hotspotCriterion?: HotspotCriterion,
     hotspotTaskName?: string
+}
+
+export type HotspotExpansionReport = HoopaAlgorithmReport & {
+    hotspot: {
+        name: string,
+        value: number,
+        criterion: HotspotCriterion
+    },
+    cluster: {
+        name: string,
+        nTopLevelTasks: number,
+        nAllTasks: number,
+        value: number,
+        criterion: HotspotCriterion,
+        percentageOfHotspot: string,
+        topLevelTasks: { name: string, value: number }[],
+        allTasks: { name: string, value: number, criterion: HotspotCriterion }[]
+    },
+    algorithm: {
+        policies?: HotspotExpansionPolicy[],
+        precision: TimeUnit
+    }
 }

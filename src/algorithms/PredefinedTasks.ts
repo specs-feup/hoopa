@@ -1,5 +1,5 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmOptions, HoopaAlgorithmReport } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 
@@ -11,7 +11,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): [Cluster, object] {
+    public run(etg: TaskGraph): [Cluster, HoopaAlgorithmReport] {
         this.log("Running PredefinedTasks algorithm");
         const cluster = new Cluster();
 
@@ -23,7 +23,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
             }
         }
         this.log("PredefinedTasks algorithm finished");
-        return [cluster, {}];
+        return [cluster, { id: this.getName() }];
     }
 
     public getName(): string {

@@ -1,5 +1,5 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
-import { AHoopaAlgorithm, HoopaAlgorithmOptions } from "./AHoopaAlgorithm.js"
+import { AHoopaAlgorithm, HoopaAlgorithmOptions, HoopaAlgorithmReport } from "./AHoopaAlgorithm.js"
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { convertTimeUnit, TimeUnit, VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
@@ -19,7 +19,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.config = config;
     }
 
-    public run(etg: TaskGraph): [Cluster, object] {
+    public run(etg: TaskGraph): [Cluster, HoopaAlgorithmReport] {
         this.log(`Running SingleHotspotTask algorithm with "${this.config.precision}" precision`);
         const tasks = etg.getTasks();
         let currMaxTask = null;
@@ -36,10 +36,10 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
                 break;
             default:
                 this.logError(`Unknown hotspot criterion: ${this.config.criterion}`);
-                return [new Cluster(), {}];
+                return [new Cluster(), { id: this.getName() }];
         }
         if (currMaxTask == null) {
-            return [new Cluster(), {}];
+            return [new Cluster(), { id: this.getName() }];
         }
 
         const cluster = new Cluster();
@@ -47,7 +47,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.log(`Created cluster with single hotspot task: ${currMaxTask.getName()}`);
 
         this.log("SingleHotspotTask algorithm finished");
-        return [cluster, {}];
+        return [cluster, { id: this.getName() }];
     }
 
     public getName(): string {
