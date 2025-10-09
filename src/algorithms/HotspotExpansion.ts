@@ -231,24 +231,35 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     private checkTaskForPolicy(error: string, policies: HotspotExpansionPolicy[]): boolean {
+        const errorStr = error.toLowerCase();
+        const hasMalloc = errorStr.includes("malloc") || errorStr.includes("calloc") || errorStr.includes("free");
+        const hasPointerToPointer = errorStr.includes("Pointer to pointer");
+        const hasStructArgWithPointer = errorStr.includes("Struct type with pointer");
+
         for (const policy of policies) {
             switch (policy) {
                 case HotspotExpansionPolicy.ALLOW_MALLOC:
                     {
-                        if (error.includes("malloc") || error.includes("free")) {
+                        if (hasMalloc) {
                             return true;
                         }
 
                     }
-                case HotspotExpansionPolicy.ALLOW_INDIRECT_POINTERS:
+                case HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER:
                     {
-                        if (error.includes("pointer type")) {
+                        if (hasPointerToPointer) {
+                            return true;
+                        }
+                    }
+                case HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER:
+                    {
+                        if (hasStructArgWithPointer) {
                             return true;
                         }
                     }
                 case HotspotExpansionPolicy.ALLOW_OTHERS:
                     {
-                        if (!error.includes("malloc") && !error.includes("free") && !error.includes("pointer type")) {
+                        if (!hasMalloc && !hasPointerToPointer && !hasStructArgWithPointer) {
                             return true;
                         }
                     }
@@ -391,7 +402,8 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
 export enum HotspotExpansionPolicy {
     ALLOW_MALLOC = "ALLOW_MALLOC",
-    ALLOW_INDIRECT_POINTERS = "ALLOW_INDIRECT_POINTERS",
+    ALLOW_POINTER_TO_POINTER = "ALLOW_POINTER_TO_POINTER",
+    ALLOW_STRUCT_ARG_WITH_POINTER = "ALLOW_STRUCT_ARG_WITH_POINTER",
     ALLOW_OTHERS = "ALLOW_OTHERS"
 }
 
