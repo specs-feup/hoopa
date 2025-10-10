@@ -22,7 +22,7 @@ export abstract class ADecorator extends AHoopaStage {
         const annotationsPerTask: [string, { [key: string]: any }][] = [];
         const annotationsPerFunction: [string, { [key: string]: any }][] = [];
 
-        for (const task of etg.getTasksByType(TaskType.REGULAR)) {
+        for (const task of etg.getTasks()) {
             let annotations: { [key: string]: any } = {};
 
             if (uniqueFunctionsOnly) {
