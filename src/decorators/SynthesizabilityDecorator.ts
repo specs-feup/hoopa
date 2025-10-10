@@ -29,8 +29,33 @@ export class SynthesizabilityDecorator extends VitisDecorator {
         this.log(`Annotated task ${task.getName()} with synthesizability data: ${isValid ? "valid" : "invalid"}`);
         return {
             "color": isValid ? "lightgreen" : "lightcoral",
-            "errors": report.errors
+            "errors": isValid ? [] : this.mapErrors(report.errors)
         };
+    }
+
+    private mapErrors(errors: string[]): HlsError[] {
+        const mappedErrors = new Set<HlsError>();
+
+        for (const error of errors) {
+            const hasMalloc = error.includes("malloc") || error.includes("calloc") || error.includes("free");
+            const hasPointerToPointer = error.includes("Pointer to pointer");
+            const hasStructArgWithPointer = error.includes("Struct type with pointer");
+            const hasOther = !hasMalloc && !hasPointerToPointer && !hasStructArgWithPointer;
+
+            if (hasMalloc) {
+                mappedErrors.add(HlsError.MALLOC);
+            }
+            if (hasPointerToPointer) {
+                mappedErrors.add(HlsError.POINTER_TO_POINTER);
+            }
+            if (hasStructArgWithPointer) {
+                mappedErrors.add(HlsError.STRUCT_WITH_STRUCT_POINTER);
+            }
+            if (hasOther) {
+                mappedErrors.add(HlsError.OTHER);
+            }
+        }
+        return Array.from(mappedErrors);
     }
 }
 
@@ -41,13 +66,36 @@ export class SynthesizabilityDotConverter extends DotConverter {
         if (!color) {
             return task.getName();
         }
+        const errors = task.getAnnotation("errors") as HlsError[];
+        if (!errors) {
+            return task.getName();
+        }
+
+        let errorStr = "";
+        if (errors.length > 0) {
+            errorStr = "Errors:\n";
+            for (const error of errors) {
+                errorStr += `- ${error}\n`;
+            }
+        }
+        else {
+            errorStr = "No errors.";
+        }
 
         const label = `${task.getName()}
-        ${color === "lightgreen" ? "Valid" : "Invalid"}`;
+        ${errorStr}
+        `;
         return label;
     }
 
     protected getLabelOfEdge(): string {
         return "";
     }
+}
+
+export enum HlsError {
+    MALLOC = "malloc",
+    POINTER_TO_POINTER = "pointer to pointer",
+    STRUCT_WITH_STRUCT_POINTER = "struct with struct pointer",
+    OTHER = "other"
 }
