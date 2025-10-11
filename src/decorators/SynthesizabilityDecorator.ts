@@ -7,7 +7,7 @@ import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 export class SynthesizabilityDecorator extends VitisDecorator {
     constructor(topFunctionName: string, outputDir: string, appName: string, subFolder: string) {
         super(topFunctionName, outputDir, appName, subFolder, "Synth");
-        this.setLabels(["color", "errors"]);
+        this.setLabels(["SynthColor", "SynthErrors"]);
     }
 
     public getDotfile(etg: TaskGraph): string {
@@ -22,14 +22,14 @@ export class SynthesizabilityDecorator extends VitisDecorator {
         const report = task.getAnnotation("Vitis") as VitisSynReport;
         if (!report) {
             this.logError(`No Vitis report found for task ${topFunction}, cannot generate synthesizability estimate.`);
-            return { "color": "gray" };
+            return { "SynthColor": "gray", "SynthErrors": [HlsError.OTHER] };
         }
         const isValid = report.errors.length === 0;
 
         this.log(`Annotated task ${task.getName()} with synthesizability data: ${isValid ? "valid" : "invalid"}`);
         return {
-            "color": isValid ? "lightgreen" : "lightcoral",
-            "errors": isValid ? [] : this.mapErrors(report.errors)
+            "SynthColor": isValid ? "lightgreen" : "lightcoral",
+            "SynthErrors": isValid ? [] : this.mapErrors(report.errors)
         };
     }
 
@@ -49,7 +49,7 @@ export class SynthesizabilityDecorator extends VitisDecorator {
                 mappedErrors.add(HlsError.POINTER_TO_POINTER);
             }
             if (hasStructArgWithPointer) {
-                mappedErrors.add(HlsError.STRUCT_WITH_STRUCT_POINTER);
+                mappedErrors.add(HlsError.STRUCT_ARG_WITH_POINTER);
             }
             if (hasOther) {
                 mappedErrors.add(HlsError.OTHER);
@@ -62,14 +62,8 @@ export class SynthesizabilityDecorator extends VitisDecorator {
 export class SynthesizabilityDotConverter extends DotConverter {
 
     protected getLabelOfTask(task: RegularTask): string {
-        const color = task.getAnnotation("color") as string;
-        if (!color) {
-            return task.getName();
-        }
-        const errors = task.getAnnotation("errors") as HlsError[];
-        if (!errors) {
-            return task.getName();
-        }
+        //const color = task.getAnnotation("SynthColor") as string ?? "gray";
+        const errors = task.getAnnotation("SynthErrors") as HlsError[] ?? [];
 
         let errorStr = "";
         if (errors.length > 0) {
@@ -96,6 +90,6 @@ export class SynthesizabilityDotConverter extends DotConverter {
 export enum HlsError {
     MALLOC = "malloc",
     POINTER_TO_POINTER = "pointer to pointer",
-    STRUCT_WITH_STRUCT_POINTER = "struct with struct pointer",
+    STRUCT_ARG_WITH_POINTER = "struct argument with struct pointer inside",
     OTHER = "other"
 }

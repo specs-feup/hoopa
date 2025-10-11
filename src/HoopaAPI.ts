@@ -134,7 +134,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/initial_runs.json`;
                         this.applyDecoration(etg, synthDecorator, path);
                         break;
                     }

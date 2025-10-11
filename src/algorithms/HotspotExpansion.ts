@@ -7,6 +7,7 @@ import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 import { HotspotCriterion, SingleHotspotTask, SingleHotspotTaskOptions } from "./SingleHotspotTask.js";
 import { FpgaResourceUsageEstimator } from "./FpgaResourceUsageEstimator.js";
 import { ProfilerData } from "../decorators/ProfilingDecorator.js";
+import { HlsError } from "../decorators/SynthesizabilityDecorator.js";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -214,57 +215,46 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     private isSynthesizable(task: ConcreteTask, policies: HotspotExpansionPolicy[] = []): boolean {
-        if (task.getAnnotation("Vitis") == null) {
+        if (task.getAnnotation("SynthErrors") == null) {
             return false;
         }
-        const report = task.getAnnotation("Vitis") as VitisSynReport;
-
-        if (policies.length === 0) {
-            return report.valid;
+        const errors = task.getAnnotation("SynthErrors") as HlsError[];
+        if (errors.length === 0) {
+            return true;
         }
 
-        let allClear = true;
-        for (const error of report.errors) {
-            allClear = allClear && this.checkTaskForPolicy(error, policies);
+        for (const error of errors) {
+            switch (error) {
+                case HlsError.MALLOC:
+                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_MALLOC)) {
+                        return false;
+                    }
+                    break;
+                case HlsError.POINTER_TO_POINTER:
+                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER)) {
+                        return false;
+                    }
+                    break;
+                case HlsError.STRUCT_ARG_WITH_POINTER:
+                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER)) {
+                        return false;
+                    }
+                    break;
+                case HlsError.OTHER:
+                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_OTHERS)) {
+                        return false;
+                    }
+                    break;
+                default:
+                    this.logWarning(`Unknown HLS error type: ${error}, assuming not synthesizable`);
+                    return false;
+            }
         }
-        return allClear;
+        return true;
     }
 
     private checkTaskForPolicy(error: string, policies: HotspotExpansionPolicy[]): boolean {
-        const errorStr = error.toLowerCase();
-        const hasMalloc = errorStr.includes("malloc") || errorStr.includes("calloc") || errorStr.includes("free");
-        const hasPointerToPointer = errorStr.includes("Pointer to pointer");
-        const hasStructArgWithPointer = errorStr.includes("Struct type with pointer");
 
-        for (const policy of policies) {
-            switch (policy) {
-                case HotspotExpansionPolicy.ALLOW_MALLOC:
-                    {
-                        if (hasMalloc) {
-                            return true;
-                        }
-
-                    }
-                case HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER:
-                    {
-                        if (hasPointerToPointer) {
-                            return true;
-                        }
-                    }
-                case HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER:
-                    {
-                        if (hasStructArgWithPointer) {
-                            return true;
-                        }
-                    }
-                case HotspotExpansionPolicy.ALLOW_OTHERS:
-                    {
-                        if (!hasMalloc && !hasPointerToPointer && !hasStructArgWithPointer) {
-                            return true;
-                        }
-                    }
-            }
-        }
         return false;
     }
 
