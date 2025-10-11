@@ -3,6 +3,7 @@ import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { ADecorator } from "./ADecorator.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
+import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 
 export class ProfilingDecorator extends ADecorator {
     private profiler: string;
@@ -43,7 +44,7 @@ export class ProfilingDecorator extends ADecorator {
         this.log(`Finished decorating ${Object.entries(decorations).length} tasks with ${this.labels.join(", ")} annotations`);
     }
 
-    protected getAnnotations(task: RegularTask): { [key: string]: any } {
+    protected getAnnotations(task: ConcreteTask): { [key: string]: any } {
         const thisProfilerData: ProfilerData = {
             "profiler": this.profiler,
             "percentage": 0.0

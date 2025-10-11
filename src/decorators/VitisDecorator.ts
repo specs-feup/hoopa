@@ -6,6 +6,7 @@ import { VitisHls } from "@specs-feup/clava-vitis-integration/VitisHls";
 import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
+import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 
 export class VitisDecorator extends ADecorator {
     private subfolder: string;
@@ -20,10 +21,8 @@ export class VitisDecorator extends ADecorator {
         return converter.convert(etg);
     }
 
-    protected getAnnotations(task: RegularTask): { [key: string]: any } {
+    protected getAnnotations(task: ConcreteTask): { [key: string]: any } {
         const topFunction = task.getName();
-        this.log(`Decorating task ${topFunction} with a Vitis HLS estimation data`);
-
         const report = this.generateHlsEstimate(topFunction);
 
         this.log(`Generated HLS estimate for task ${task.getName()}`);

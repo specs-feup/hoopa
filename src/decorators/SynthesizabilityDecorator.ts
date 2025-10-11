@@ -3,6 +3,7 @@ import { VitisDecorator } from "./VitisDecorator.js";
 import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
+import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 
 export class SynthesizabilityDecorator extends VitisDecorator {
     constructor(topFunctionName: string, outputDir: string, appName: string, subFolder: string) {
@@ -15,14 +16,11 @@ export class SynthesizabilityDecorator extends VitisDecorator {
         return converter.convert(etg);
     }
 
-    protected getAnnotations(task: RegularTask): { [key: string]: any } {
-        const topFunction = task.getName();
-        this.log(`Decorating task ${topFunction} with synthesizability data`);
-
+    protected getAnnotations(task: ConcreteTask): { [key: string]: any } {
         const report = task.getAnnotation("Vitis") as VitisSynReport;
         if (!report) {
-            this.logError(`No Vitis report found for task ${topFunction}, cannot generate synthesizability estimate.`);
-            return { "SynthColor": "gray", "SynthErrors": [HlsError.OTHER] };
+            this.log(`Task ${task.getName()} has no Vitis data, marking as non-synthesizable`);
+            return this.buildErrorsForTask(task as ConcreteTask);
         }
         const isValid = report.errors.length === 0;
 
@@ -31,6 +29,19 @@ export class SynthesizabilityDecorator extends VitisDecorator {
             "SynthColor": isValid ? "lightgreen" : "lightcoral",
             "SynthErrors": isValid ? [] : this.mapErrors(report.errors)
         };
+    }
+
+    private buildErrorsForTask(task: ConcreteTask): { [key: string]: any } {
+        const errors: HlsError[] = [];
+        const mallocFunctions = ["malloc", "calloc", "free"];
+        const taskName = task.getName();
+        if (mallocFunctions.includes(taskName)) {
+            errors.push(HlsError.MALLOC);
+        }
+        if (errors.length === 0) {
+            errors.push(HlsError.OTHER);
+        }
+        return { "SynthColor": SynthesizabilityDotColors.INVALID, "SynthErrors": errors };
     }
 
     private mapErrors(errors: string[]): HlsError[] {
@@ -69,7 +80,9 @@ export class SynthesizabilityDotConverter extends DotConverter {
         if (errors.length > 0) {
             errorStr = "Errors:\n";
             for (const error of errors) {
-                errorStr += `- ${error}\n`;
+                // insert newlines every 20 characters (without breaking words)
+                const wrappedError = error.replace(/(.{1,40})(\s|$)/g, "$1\n").trim();
+                errorStr += `- ${wrappedError}\n`;
             }
         }
         else {
@@ -87,9 +100,14 @@ export class SynthesizabilityDotConverter extends DotConverter {
     }
 }
 
+export enum SynthesizabilityDotColors {
+    VALID = "lightgreen",
+    INVALID = "lightcoral"
+}
+
 export enum HlsError {
-    MALLOC = "malloc",
-    POINTER_TO_POINTER = "pointer to pointer",
+    MALLOC = "memory de/allocation",
+    POINTER_TO_POINTER = "pointer to pointer assignment",
     STRUCT_ARG_WITH_POINTER = "struct argument with struct pointer inside",
     OTHER = "other"
 }

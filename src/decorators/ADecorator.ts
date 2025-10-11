@@ -3,6 +3,7 @@ import { AHoopaStage } from "../AHoopaStage.js";
 import { TaskType } from "@specs-feup/extended-task-graph/TaskType";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import Io from "@specs-feup/lara/api/lara/Io.js";
+import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
 
 export abstract class ADecorator extends AHoopaStage {
     protected labels: string[];
@@ -68,7 +69,7 @@ export abstract class ADecorator extends AHoopaStage {
 
     public abstract getDotfile(etg: TaskGraph): string;
 
-    protected abstract getAnnotations(task: RegularTask): { [key: string]: any };
+    protected abstract getAnnotations(task: ConcreteTask): { [key: string]: any };
 
     protected setLabels(labels: string[]): void {
         this.labels = labels;
