@@ -113,8 +113,8 @@ export enum SynthesizabilityDotColors {
 }
 
 export enum HlsError {
-    MALLOC,
-    POINTER_TO_POINTER,
-    STRUCT_ARG_WITH_POINTER,
-    OTHER
+    MALLOC = "Memory de/allocation",
+    POINTER_TO_POINTER = "Pointer to pointer",
+    STRUCT_ARG_WITH_POINTER = "Struct arg with pointer field",
+    OTHER = "Other"
 }

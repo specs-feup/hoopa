@@ -16,7 +16,7 @@ export abstract class ADecorator extends AHoopaStage {
         return this.labels;
     }
 
-    public decorate(etg: TaskGraph, uniqueFunctionsOnly: boolean = true): [string, { [key: string]: any }][] {
+    public decorate(etg: TaskGraph): [string, { [key: string]: any }][] {
         this.log(`Decorating ETG with ${this.labels.join(", ")} annotations`);
 
         const annotationsPerTask: [string, { [key: string]: any }][] = [];
@@ -25,23 +25,33 @@ export abstract class ADecorator extends AHoopaStage {
         for (const task of etg.getTasks()) {
             let annotations: { [key: string]: any } = {};
 
-            if (uniqueFunctionsOnly) {
-                const functionName = task.getCall()?.function.signature;
-                if (annotationsPerFunction.some(([name, _]) => name === functionName)) {
-                    annotations = annotationsPerFunction.find(([name, _]) => name === functionName)![1];
-                }
-                else {
-                    annotations = this.getAnnotations(task as RegularTask);
-                    annotationsPerFunction.push([functionName!, annotations]);
+            const taskName = task.getName();
+            let simplifiedName = taskName;
+            let isReplicated = false;
+
+            // Check if functionName matches the pattern baseName_rep1_rep2_..._repN
+
+            const match = taskName.match(/^(.*?)(?:_rep\d+)+$/);
+            if (match) {
+                simplifiedName = match[1];
+                isReplicated = true;
+            }
+
+            if (isReplicated) {
+                if (annotationsPerFunction.some(([name, _]) => name === simplifiedName)) {
+                    annotations = annotationsPerFunction.find(([name, _]) => name === simplifiedName)![1];
+                } else {
+                    annotations = this.getAnnotations(task);
+                    annotationsPerFunction.push([simplifiedName, annotations]);
                 }
             }
             else {
-                annotations = this.getAnnotations(task as RegularTask);
+                annotations = this.getAnnotations(task);
             }
 
             for (const [label, annotation] of Object.entries(annotations)) {
                 task.setAnnotation(label, annotation);
-                annotationsPerTask.push([task.getName(), annotations]);
+                annotationsPerTask.push([taskName, annotations]);
             }
         }
         this.log(`Finished decorating ${annotationsPerTask.length} tasks with ${this.labels.join(", ")} annotations`);
@@ -53,7 +63,8 @@ export abstract class ADecorator extends AHoopaStage {
 
         const decorations = Io.readJson(filename);
         for (const [taskName, annotations] of decorations) {
-            const tasks = etg.getTasksOfSameName(taskName);
+            const tasks = etg.getTasks().filter(t => t.getName().startsWith(taskName));
+
             tasks.forEach(task => {
                 for (const [label, annotation] of Object.entries(annotations)) {
                     task.setAnnotation(label, annotation);

@@ -222,7 +222,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         if (errors.length === 0) {
             return true;
         }
-        console.log(errors);
+
         for (const error of errors) {
             switch (error) {
                 case HlsError.MALLOC:
