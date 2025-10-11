@@ -4,6 +4,7 @@ import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
+import { Task } from "@specs-feup/extended-task-graph/Task";
 
 export class SynthesizabilityDecorator extends VitisDecorator {
     constructor(topFunctionName: string, outputDir: string, appName: string, subFolder: string) {
@@ -35,6 +36,7 @@ export class SynthesizabilityDecorator extends VitisDecorator {
         const errors: HlsError[] = [];
         const mallocFunctions = ["malloc", "calloc", "free"];
         const taskName = task.getName();
+
         if (mallocFunctions.includes(taskName)) {
             errors.push(HlsError.MALLOC);
         }
@@ -81,8 +83,7 @@ export class SynthesizabilityDotConverter extends DotConverter {
             errorStr = "Errors:\n";
             for (const error of errors) {
                 // insert newlines every 20 characters (without breaking words)
-                const wrappedError = error.replace(/(.{1,40})(\s|$)/g, "$1\n").trim();
-                errorStr += `- ${wrappedError}\n`;
+                errorStr += `- ${error}\n`;
             }
         }
         else {
@@ -98,16 +99,22 @@ export class SynthesizabilityDotConverter extends DotConverter {
     protected getLabelOfEdge(): string {
         return "";
     }
+
+    protected getColorForTask(task: Task, index: number): string {
+        const color = task.getAnnotation("SynthColor") as string;
+        return color ?? SynthesizabilityDotColors.UNKNOWN;
+    }
 }
 
 export enum SynthesizabilityDotColors {
     VALID = "lightgreen",
-    INVALID = "lightcoral"
+    INVALID = "lightcoral",
+    UNKNOWN = "gray"
 }
 
 export enum HlsError {
-    MALLOC = "memory de/allocation",
-    POINTER_TO_POINTER = "pointer to pointer assignment",
-    STRUCT_ARG_WITH_POINTER = "struct argument with struct pointer inside",
-    OTHER = "other"
+    MALLOC,
+    POINTER_TO_POINTER,
+    STRUCT_ARG_WITH_POINTER,
+    OTHER
 }

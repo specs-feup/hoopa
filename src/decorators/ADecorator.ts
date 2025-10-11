@@ -1,6 +1,5 @@
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { AHoopaStage } from "../AHoopaStage.js";
-import { TaskType } from "@specs-feup/extended-task-graph/TaskType";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
@@ -54,15 +53,12 @@ export abstract class ADecorator extends AHoopaStage {
 
         const decorations = Io.readJson(filename);
         for (const [taskName, annotations] of decorations) {
-            const task = etg.getTaskByName(taskName);
-
-            if (!task) {
-                continue;
-            }
-
-            for (const [label, annotation] of Object.entries(annotations)) {
-                task.setAnnotation(label, annotation);
-            }
+            const tasks = etg.getTasksOfSameName(taskName);
+            tasks.forEach(task => {
+                for (const [label, annotation] of Object.entries(annotations)) {
+                    task.setAnnotation(label, annotation);
+                }
+            });
         }
         this.log(`Finished decorating ${decorations.length} tasks with ${this.labels.join(", ")} annotations`);
     }

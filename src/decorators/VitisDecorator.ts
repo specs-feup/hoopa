@@ -7,6 +7,7 @@ import { VitisSynReport } from "@specs-feup/clava-vitis-integration/VitisReports
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { TaskGraph } from "@specs-feup/extended-task-graph/TaskGraph";
 import { ConcreteTask } from "@specs-feup/extended-task-graph/ConcreteTask";
+import { Task } from "@specs-feup/extended-task-graph/Task";
 
 export class VitisDecorator extends ADecorator {
     private subfolder: string;
