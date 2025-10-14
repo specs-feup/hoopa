@@ -23,12 +23,13 @@ export class SynthesizabilityDecorator extends VitisDecorator {
             this.log(`Task ${task.getName()} has no Vitis data, marking as non-synthesizable`);
             return this.buildErrorsForTask(task as ConcreteTask);
         }
-        const isValid = report.errors.length === 0;
+        const isValid = report.valid;
+        const errors = isValid ? [] : (report.errors.length > 0 ? this.mapErrors(report.errors) : [HlsError.STRUCT_WITH_POINTERS]);
 
         this.log(`Annotated task ${task.getName()} with synthesizability data: ${isValid ? "valid" : "invalid"}`);
         return {
             "SynthColor": isValid ? "lightgreen" : "lightcoral",
-            "SynthErrors": isValid ? [] : this.mapErrors(report.errors)
+            "SynthErrors": errors
         };
     }
 
@@ -114,6 +115,7 @@ export enum SynthesizabilityDotColors {
 
 export enum HlsError {
     MALLOC = "Memory de/allocation",
+    STRUCT_WITH_POINTERS = "Struct pointer with pointer field",
     POINTER_TO_POINTER = "Pointer to pointer",
     STRUCT_ARG_WITH_POINTER = "Struct arg with pointer field",
     OTHER = "Other"

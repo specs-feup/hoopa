@@ -230,6 +230,11 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                         return false;
                     }
                     break;
+                case HlsError.STRUCT_WITH_POINTERS:
+                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS)) {
+                        return false;
+                    }
+                    break;
                 case HlsError.POINTER_TO_POINTER:
                     if (!policies.includes(HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER)) {
                         return false;
@@ -387,6 +392,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
 export enum HotspotExpansionPolicy {
     ALLOW_MALLOC = "ALLOW_MALLOC",
+    ALLOW_STRUCTS_WITH_POINTERS = "ALLOW_STRUCTS_WITH_POINTERS",
     ALLOW_POINTER_TO_POINTER = "ALLOW_POINTER_TO_POINTER",
     ALLOW_STRUCT_ARG_WITH_POINTER = "ALLOW_STRUCT_ARG_WITH_POINTER",
     ALLOW_OTHERS = "ALLOW_OTHERS"
