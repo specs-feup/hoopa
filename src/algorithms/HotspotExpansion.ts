@@ -223,36 +223,21 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return true;
         }
 
+        const errorToPolicyMap = new Map<HlsError, HotspotExpansionPolicy>();
+        errorToPolicyMap.set(HlsError.MALLOC, HotspotExpansionPolicy.ALLOW_MALLOC);
+        errorToPolicyMap.set(HlsError.STRUCT_WITH_POINTERS, HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS);
+        errorToPolicyMap.set(HlsError.POINTER_TO_POINTER, HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER);
+        errorToPolicyMap.set(HlsError.STRUCT_ARG_WITH_POINTER, HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER);
+        errorToPolicyMap.set(HlsError.OTHER, HotspotExpansionPolicy.ALLOW_OTHERS);
+
         for (const error of errors) {
-            switch (error) {
-                case HlsError.MALLOC:
-                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_MALLOC)) {
-                        return false;
-                    }
-                    break;
-                case HlsError.STRUCT_WITH_POINTERS:
-                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS)) {
-                        return false;
-                    }
-                    break;
-                case HlsError.POINTER_TO_POINTER:
-                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER)) {
-                        return false;
-                    }
-                    break;
-                case HlsError.STRUCT_ARG_WITH_POINTER:
-                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER)) {
-                        return false;
-                    }
-                    break;
-                case HlsError.OTHER:
-                    if (!policies.includes(HotspotExpansionPolicy.ALLOW_OTHERS)) {
-                        return false;
-                    }
-                    break;
-                default:
-                    this.logWarning(`Unknown HLS error type: ${error}, assuming not synthesizable`);
-                    return false;
+            const policyOfError = errorToPolicyMap.get(error);
+            if (policyOfError === undefined) {
+                this.logWarning(`Unknown synthesis error "${error}" for task ${task.getName()}, treating as non-synthesizable`);
+                return false;
+            }
+            if (!policies.includes(policyOfError)) {
+                return false;
             }
         }
         return true;
@@ -309,12 +294,12 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     private createClusterInward(task: ConcreteTask): Cluster {
-        if (this.isSynthesizable(task, this.config.policies)) {
-            this.log(`Task ${task.getName()} is synthesizable, creating cluster`);
-            const cluster = new Cluster();
-            cluster.addTask(task);
-            return cluster;
-        }
+        // if (this.isSynthesizable(task, this.config.policies)) {
+        //     this.log(`Task ${task.getName()} is synthesizable, creating cluster`);
+        //     const cluster = new Cluster();
+        //     cluster.addTask(task);
+        //     return cluster;
+        // }
 
         const leafTasks = this.getLeafTasks(task);
         const validLeafTasks = leafTasks.filter(t => this.isSynthesizable(t, this.config.policies));
@@ -336,57 +321,69 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     private createClusterOutward(task: ConcreteTask): Cluster {
-        const cluster = new Cluster();
+        let cluster = new Cluster();
         cluster.addTask(task);
         this.log(` - Added task ${task.getName()} to cluster`);
 
         const parent = task.getHierarchicalParent();
         if (parent == null) {
-            this.log(" - No more parent tasks to expand");
+            this.log(" - Task has no parent, and therefore is the root task. Finished.");
             return cluster;
         }
-        // if the hier parent is synthesizable, we move up the cluster up one level
-        if (this.isSynthesizable(parent, this.config.policies)) {
-            this.log(` - Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
-            return this.createClusterOutward(parent);
-        }
-        // else, we try to add siblings at the same hierarchical level
-        else {
-            this.log(` - Parent task ${parent.getName()} is not synthesizable, checking siblings`);
-            const siblings = parent.getHierarchicalChildren().filter(t => t.getId() !== task.getId());
-            const noChangeLimit = siblings.length + 1;
-            let noChangeCount = 0;
 
-            while (noChangeCount < noChangeLimit) {
-                const nextTask = siblings.shift()!;
-                if (nextTask === undefined) {
-                    break;
+        this.log(` - Trying to add siblings of ${task.getName()} to the cluster`);
+        const siblings = parent.getHierarchicalChildren().filter(t => t.getId() !== task.getId());
+        const noChangeLimit = siblings.length + 1;
+        let noChangeCount = 0;
+
+        while (noChangeCount < noChangeLimit) {
+            const nextTask = siblings.shift()!;
+            if (nextTask === undefined) {
+                break;
+            }
+            // task is already in cluster
+            if (cluster.hasTask(nextTask)) {
+                continue;
+            }
+            // task is not synthesizable, and it can never be added
+            if (!this.isSynthesizable(nextTask, this.config.policies)) {
+                continue;
+            }
+            else {
+                // task is synthesizable, we try to add it
+                if (cluster.canAdd(nextTask)) {
+                    cluster.addTask(nextTask);
+                    this.log(` -- Added sibling task ${nextTask.getName()} to cluster`);
+                    noChangeCount = 0;
                 }
-                // task is already in cluster
-                if (cluster.hasTask(nextTask)) {
-                    continue;
-                }
-                // task is not synthesizable, and it can never be added
-                if (!this.isSynthesizable(nextTask, this.config.policies)) {
-                    continue;
-                }
+                // if we cannot add it, we may need to wait for other siblings to be added first
+                // we put it back at the end of the list, and hope it can be added later
                 else {
-                    // task is synthesizable, we try to add it
-                    if (cluster.canAdd(nextTask)) {
-                        cluster.addTask(nextTask);
-                        this.log(` - Added sibling task ${nextTask.getName()} to cluster`);
-                        noChangeCount = 0;
-                    }
-                    // if we cannot add it, we may need to wait for other siblings to be added first
-                    // we put it back at the end of the list, and hope it can be added later
-                    else {
-                        noChangeCount++;
-                        siblings.push(task);
-                    }
+                    noChangeCount++;
+                    siblings.push(task);
                 }
-            };
+            }
+        };
+        const clusterSize = cluster.getTasks().length;
+        this.log(` - Finished adding ${clusterSize - 1} siblings ${task.getName()}`);
+
+        const nChildrenOfParent = parent.getHierarchicalChildren().length;
+        if (clusterSize === nChildrenOfParent) {
+            if (this.isSynthesizable(parent, this.config.policies)) {
+                this.log(` - Parent task ${parent.getName()} is synthesizable, replacing cluster with it`);
+                cluster = new Cluster();
+                cluster.addTask(parent);
+                return this.createClusterOutward(parent);
+            }
+            else {
+                this.log(` - Parent task ${parent.getName()} is not synthesizable. Finished.`);
+                return cluster;
+            }
         }
-        return cluster;
+        else {
+            this.log(` - Could not add all siblings of ${task.getName()} to the cluster. Finished.`);
+            return cluster;
+        }
     }
 }
 
