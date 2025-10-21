@@ -12,6 +12,7 @@ import { TaskExtractor } from "@specs-feup/extended-task-graph/TaskExtractor";
 import { XrtCBackend } from "./backends/xrt/XrtCBackend.js";
 import { CudaBackend } from "./backends/cuda/CudaBackend.js";
 import { OmpSsBackend } from "./backends/ompss/OmpsSsBackend.js";
+import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -23,6 +24,10 @@ export class Offloader extends AHoopaStage {
         if (cluster.getTasks().length == 0) {
             this.logWarning("Cluster is empty! Skipping offloading...");
             return false;
+        }
+        if (backend == OffloadingBackend.NONE) {
+            this.emitNoBackend(folderName);
+            return true;
         }
         Clava.pushAst();
 
@@ -73,11 +78,22 @@ export class Offloader extends AHoopaStage {
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
                     return offloader.apply(wrapperFun, inOutsMap, folderName, false);
                 }
+            case OffloadingBackend.NONE:
+                {
+                    this.emitNoBackend(folderName);
+                    return true;
+                }
             default:
                 {
                     this.logError(`Unknown offloading backend ${backend}`);
                     return false;
                 }
         }
+    }
+
+    private emitNoBackend(folderName: string): boolean {
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}`);
+        this.log(`"None" backend selected, code generated with no separation at ${SourceCodeOutput.SRC_PARENT}/${folderName}`);
+        return true;
     }
 }

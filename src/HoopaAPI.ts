@@ -43,7 +43,6 @@ export class HoopaAPI extends AHoopaStage {
         this.logStart();
         this.log("Running Hoopa for the current AST");
 
-
         const runConfig = this.run;
         this.logLine();
         this.log(`Running Hoopa for run configuration:`);
@@ -63,7 +62,6 @@ export class HoopaAPI extends AHoopaStage {
 
         this.runHoopa(etg, runConfig);
         this.logLine();
-
 
         this.log("Finished running Hoopa for all run configurations");
         this.logEnd();
@@ -93,7 +91,7 @@ export class HoopaAPI extends AHoopaStage {
         this.saveClusterData(report);
 
         this.log("Starting offloading");
-        this.offload(cluster, config.backends, config.variant);
+        this.offload(cluster, config.backends, report.id);
     }
 
     private saveClusterDot(cluster: Cluster, etg: TaskGraph, name: string): void {
@@ -213,7 +211,7 @@ export class HoopaAPI extends AHoopaStage {
         return alg.run(etg);
     }
 
-    private offload(cluster: Cluster, backends: OffloadingBackend[], variant: string): void {
+    private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string): void {
         if (backends.length === 0) {
             this.log("No backends to offload to");
             return;
@@ -221,7 +219,7 @@ export class HoopaAPI extends AHoopaStage {
 
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         for (const backend of backends) {
-            const outDir = `${variant}_${backend.toLowerCase()}`;
+            const outDir = `${alg}_${backend.toLowerCase()}`;
             offloader.offload(cluster, backend, outDir, false);
         }
     }
