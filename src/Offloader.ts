@@ -24,6 +24,7 @@ export class Offloader extends AHoopaStage {
             this.logWarning("Cluster is empty! Skipping offloading...");
             return false;
         }
+        Clava.pushAst();
 
         let wrapperFun: FunctionJp;
         if (cluster.getTasks().length == 1) {
@@ -38,6 +39,12 @@ export class Offloader extends AHoopaStage {
         const inOuts = cluster.getInOuts();
         const inOutsMap = new Map<string, ClusterInOut>(inOuts);
 
+        const success = this.emitBackend(backend, wrapperFun, inOutsMap, folderName);
+        Clava.popAst();
+        return success;
+    }
+
+    private emitBackend(backend: OffloadingBackend, wrapperFun: FunctionJp, inOutsMap: Map<string, ClusterInOut>, folderName: string): boolean {
         switch (backend) {
             case OffloadingBackend.AXI:
                 {

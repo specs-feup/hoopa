@@ -22,7 +22,7 @@ export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
     private transFlowConfig: TransFlowConfig;
     private genFlowConfig: GenFlowConfig;
-    private runs: HoopaRun[];
+    private run: HoopaRun;
 
     constructor(topFunctionName: string, config: HoopaConfig, outputDir = "output", appName = "default_app_name") {
         super("API", topFunctionName, `${outputDir}/${appName}`, appName);
@@ -30,7 +30,12 @@ export class HoopaAPI extends AHoopaStage {
         this.genFlowConfig = config.getGenFlowConfig();
         this.etgApi = new ExtendedTaskGraphAPI(topFunctionName, outputDir, appName);
 
-        this.runs = config.generateRuns();
+        const runs = config.generateRuns();
+        if (runs.length > 1) {
+            this.logWarning(`Multiple runs generated (${runs.length}), only the first one will be run`);
+            this.logWarning("Support for multiple runs will be added in future versions");
+        }
+        this.run = runs[0];
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {
@@ -38,28 +43,27 @@ export class HoopaAPI extends AHoopaStage {
         this.logStart();
         this.log("Running Hoopa for the current AST");
 
-        this.log(`Generated ${this.runs.length} run configurations from provided HoopaConfig`);
 
-        for (const runConfig of this.runs) {
-            this.logLine();
-            this.log(`Running Hoopa for run configuration:`);
-            this.log(` name:         ${runConfig.variant}`);
-            this.log(` decorators:   ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
-            this.log(` algorithm:    ${runConfig.algorithm}`);
-            this.log(` alg. options: ${JSON.stringify(runConfig.algorithmOptions)}`);
-            this.log(` backends:     ${runConfig.backends.join(", ")}`);
-            this.log(` target:       ${runConfig.target.name}`);
+        const runConfig = this.run;
+        this.logLine();
+        this.log(`Running Hoopa for run configuration:`);
+        this.log(` name:         ${runConfig.variant}`);
+        this.log(` decorators:   ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
+        this.log(` algorithm:    ${runConfig.algorithm}`);
+        this.log(` alg. options: ${JSON.stringify(runConfig.algorithmOptions)}`);
+        this.log(` backends:     ${runConfig.backends.join(", ")}`);
+        this.log(` target:       ${runConfig.target.name}`);
 
-            const etg = this.getTaskGraph(skipCodeFlow);
-            if (!etg) {
-                this.logError("ETG generation failed!");
-                return;
-            }
-            this.log("ETG generated successfully!");
-
-            this.runHoopa(etg, runConfig);
-            this.logLine();
+        const etg = this.getTaskGraph(skipCodeFlow);
+        if (!etg) {
+            this.logError("ETG generation failed!");
+            return;
         }
+        this.log("ETG generated successfully!");
+
+        this.runHoopa(etg, runConfig);
+        this.logLine();
+
 
         this.log("Finished running Hoopa for all run configurations");
         this.logEnd();
