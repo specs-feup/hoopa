@@ -7,7 +7,8 @@ import { BuiltinGpuTarget, getGpuTarget } from "./platforms/BuiltinGpuPlatforms.
 
 export const enum HoopaOutputDirectory {
     DECORATORS = "decorators",
-    CLUSTERS = "clusters"
+    CLUSTERS = "clusters",
+    HLS = "hls_reports",
 }
 
 export const enum TaskGraphDecorator {

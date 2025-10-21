@@ -50,8 +50,8 @@ export abstract class AHoopaAlgorithm extends AHoopaStage {
         const filename = `vitis_${type}_${this.getName()}.json`;
         const json = JSON.stringify(report, null, 4);
 
-        this.saveToFileInSubfolder(json, filename, HoopaOutputDirectory.CLUSTERS);
-        this.log(`Saved ${type} report to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
+        this.saveToFileInSubfolder(json, filename, HoopaOutputDirectory.HLS);
+        this.log(`Saved ${type} report to ${HoopaOutputDirectory.HLS}/${filename}`);
     }
 }
 
