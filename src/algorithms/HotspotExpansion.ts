@@ -8,6 +8,10 @@ import { HotspotCriterion, SingleHotspotTask, SingleHotspotTaskOptions } from ".
 import { FpgaResourceUsageEstimator } from "./FpgaResourceUsageEstimator.js";
 import { ProfilerData } from "../decorators/ProfilingDecorator.js";
 import { HlsError } from "../decorators/SynthesizabilityDecorator.js";
+import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
+import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlattener";
+import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -47,6 +51,12 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         this.log(`Hotspot task "${hotspotTask.getName()}" value: ${this.getValueWithUnit(hotspotValue)}`);
         this.log(`Cluster represents ${(clusterValue / hotspotValue * 100).toFixed(2)}% of the hotspot task value`);
 
+        if (this.config.applyTransformations) {
+            this.applyTransformations(cluster);
+        }
+
+        this.runHls(cluster, this.config.hlsSynthesis || false, this.config.hlsImplementation || false);
+
         const report = this.createReport(cluster, hotspotTask, hotspotValue);
 
         this.log("HotspotExpansion algorithm finished");
@@ -55,6 +65,42 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
     public getName(): string {
         return `HotspotExpansion_${this.config.hotspotCriterion}_${this.config.policies?.join("_")}`;
+    }
+
+    private applyTransformations(cluster: Cluster): void {
+        this.log("Applying transformations to the cluster tasks");
+        const tasks = cluster.getTasks();
+        if (tasks.length > 1) {
+            this.logWarning(`Cluster has ${tasks.length} tasks, which is not yet supported for transformations. Skipping this step.`);
+            return;
+        }
+        const task = tasks[0] as RegularTask;
+        this.log(`Applying transformations to task ${task.getName()}`);
+
+        for (const policy of this.config.policies!) {
+            switch (policy) {
+                case HotspotExpansionPolicy.ALLOW_MALLOC:
+                    this.log(` - malloc is allowed, applying malloc hoisting from task ${task.getName()} onwards`);
+                    this.logWarning("Malloc hoisting transformation is not yet implemented");
+                    break;
+                case HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS:
+                case HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER:
+                case HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER:
+                    this.log(` - structs/pointers are allowed, applying struct flattening from task ${task.getName()} onwards`);
+
+                    const structFlat = new StructFlattener(new LightStructFlattener());
+                    structFlat.flattenAll(task.getFunction());
+
+                    break;
+                case HotspotExpansionPolicy.ALLOW_OTHERS:
+                    this.log(` - other synthesis errors are allowed, no specific transformation to apply`);
+                    break;
+                default:
+                    this.logWarning(` - unknown policy ${policy}, skipping`);
+                    break;
+            }
+        }
+        Clava.rebuild();
     }
 
     private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): HotspotExpansionReport {
@@ -405,7 +451,10 @@ export type HotspotExpansionOptions = HoopaAlgorithmOptions & {
     policies?: HotspotExpansionPolicy[],
     profiler?: string,
     hotspotCriterion?: HotspotCriterion,
-    hotspotTaskName?: string
+    hotspotTaskName?: string,
+    applyTransformations?: boolean,
+    hlsSynthesis?: boolean
+    hlsImplementation?: boolean
 }
 
 export type HotspotExpansionReport = HoopaAlgorithmReport & {
