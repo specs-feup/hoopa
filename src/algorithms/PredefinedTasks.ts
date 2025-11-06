@@ -19,6 +19,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
             const task = etg.getTaskByName(taskName);
 
             if (task != null && task instanceof RegularTask) {
+                this.log(`Adding predefined task ${taskName} to cluster`);
                 cluster.addTask(task);
             }
         }
@@ -27,7 +28,7 @@ export class PredefinedTasks extends AHoopaAlgorithm {
     }
 
     public getName(): string {
-        return `PredefinedTasks_${this.config.taskNames.join("_")}`;
+        return `alg_PredefinedTasks_${this.config.taskNames.join("_")}`;
     }
 }
 

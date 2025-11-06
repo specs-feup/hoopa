@@ -51,16 +51,21 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
     }
 
     public getName(): string {
+        let criterion = "unknown";
         switch (this.config.criterion) {
             case HotspotCriterion.LATENCY:
-                return `SingleHotspotTask-Latency-${this.config.precision}`;
+                criterion = "lat";
+                break;
             case HotspotCriterion.RESOURCES:
-                return "SingleHotspotTask-Resources";
+                criterion = "res";
+                break;
             case HotspotCriterion.COMPUTATION_PERCENTAGE:
-                return `SingleHotspotTask-ComputationPercentage-${this.config.profiler}-Target${this.config.percentageTarget}`;
+                criterion = "comp%";
+                break;
             default:
-                return "SingleHotspotTask-UnknownCriterion";
+                break;
         }
+        return `alg_SingleHotspotTask_${criterion}`;
     }
 
     private selectOnLatency(tasks: ConcreteTask[]): ConcreteTask | null {
