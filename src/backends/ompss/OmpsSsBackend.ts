@@ -8,9 +8,8 @@ export class OmpSsBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "OmpSs@FPGA");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, inOuts: Map<string, ClusterInOut>, debug: boolean): Scope {
-        this.logWarning("OmpSs backend not implemented yet, outputting an empty wrapper function");
-        const body = ClavaJoinPoints.scope();
-        return body;
+    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
+        this.logWarning("OmpSs backend not implemented yet, outputting the same bridge function");
+        return bridgeFun.body!;
     }
 }

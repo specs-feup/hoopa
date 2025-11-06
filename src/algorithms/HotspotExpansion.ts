@@ -12,6 +12,7 @@ import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
 import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlattener";
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import { MallocHoister } from "@specs-feup/clava-code-transforms/MallocHoister";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -64,7 +65,46 @@ export class HotspotExpansion extends AHoopaAlgorithm {
     }
 
     public getName(): string {
-        return `HotspotExpansion_${this.config.hotspotCriterion}_${this.config.policies?.join("_")}`;
+        let criterion = "unknown";
+        switch (this.config.hotspotCriterion) {
+            case HotspotCriterion.LATENCY:
+                criterion = "lat";
+                break;
+            case HotspotCriterion.RESOURCES:
+                criterion = "res";
+                break;
+            case HotspotCriterion.COMPUTATION_PERCENTAGE:
+                criterion = "comp%";
+                break;
+            default:
+                break;
+        }
+        let policies: string[] = [];
+        for (const policy of this.config.policies || []) {
+            switch (policy) {
+                case HotspotExpansionPolicy.ALLOW_MALLOC:
+                    policies.push("Malloc");
+                    break;
+                case HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS:
+                    policies.push("StructP");
+                    break;
+                case HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER:
+                    policies.push("P2P");
+                    break;
+                case HotspotExpansionPolicy.ALLOW_STRUCT_ARG_WITH_POINTER:
+                    policies.push("SArgP");
+                    break;
+                case HotspotExpansionPolicy.ALLOW_OTHERS:
+                    policies.push("Others");
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (policies.length === 0) {
+            policies.push("NoPolicy");
+        }
+        return `alg_HotspotExpansion_${criterion}_${policies.join("-")}`;
     }
 
     private applyTransformations(cluster: Cluster): void {
@@ -74,6 +114,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             this.logWarning(`Cluster has ${tasks.length} tasks, which is not yet supported for transformations. Skipping this step.`);
             return;
         }
+
         const task = tasks[0] as RegularTask;
         this.log(`Applying transformations to task ${task.getName()}`);
 
@@ -81,7 +122,10 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             switch (policy) {
                 case HotspotExpansionPolicy.ALLOW_MALLOC:
                     this.log(` - malloc is allowed, applying malloc hoisting from task ${task.getName()} onwards`);
-                    this.logWarning("Malloc hoisting transformation is not yet implemented");
+
+                    const hoister = new MallocHoister();
+                    hoister.hoistAllMallocs(task.getFunction());
+
                     break;
                 case HotspotExpansionPolicy.ALLOW_STRUCTS_WITH_POINTERS:
                 case HotspotExpansionPolicy.ALLOW_POINTER_TO_POINTER:
@@ -99,8 +143,13 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                     this.logWarning(` - unknown policy ${policy}, skipping`);
                     break;
             }
+            try {
+                Clava.rebuild();
+            } catch (e) {
+                this.logError(`Error rebuilding code after applying transformations for policy ${policy}`);
+                return;
+            }
         }
-        Clava.rebuild();
     }
 
     private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): HotspotExpansionReport {

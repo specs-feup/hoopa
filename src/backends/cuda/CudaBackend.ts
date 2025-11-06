@@ -1,6 +1,4 @@
 import { FunctionJp, Scope } from "@specs-feup/clava/api/Joinpoints.js";
-import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { ClusterInOut } from "@specs-feup/extended-task-graph/Cluster";
 import { ABackend } from "../ABackend.js";
 
 export class CudaBackend extends ABackend {
@@ -8,9 +6,8 @@ export class CudaBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "CUDA");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, inOuts: Map<string, ClusterInOut>, debug: boolean): Scope {
-
-        const body = ClavaJoinPoints.scope();
-        return body;
+    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
+        this.logWarning("CUDA backend not implemented yet, outputting the same bridge function");
+        return bridgeFun.body!;
     }
 }

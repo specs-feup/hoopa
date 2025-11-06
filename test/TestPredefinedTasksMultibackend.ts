@@ -5,7 +5,6 @@ import { BuiltinFpgaTarget } from "../src/platforms/BuiltinFpgaPlatforms.js";
 
 const config = new HoopaConfig()
     .addBackend(OffloadingBackend.XRT)
-    .addBackend(OffloadingBackend.CPU)
     .addAlgorithm(HoopaAlgorithm.PREDEFINED_TASKS, {
         taskNames: ["convolve2d_rep2", "combthreshold"]
     } as PredefinedTasksOptions)

@@ -8,29 +8,29 @@ export class XrtCxxBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected buildBody(wrapperFun: FunctionJp, entrypoint: string, inOuts: Map<string, ClusterInOut>, debug: boolean): Scope {
+    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
         const wl = ClavaJoinPoints.stmtLiteral("");
 
         if (debug) {
-            this.generateDebugHeader(wrapperFun);
+            this.generateDebugHeader(bridgeFun);
         }
-        this.addIncludes(wrapperFun);
+        this.addIncludes(clusterFun);
 
         const stmts: Statement[] = [
-            this.generateDebugInfo(debug, `Setting up XRT kernel ${entrypoint}`),
-            ...this.generateXrtInit(entrypoint),
+            this.generateDebugInfo(debug, `Setting up XRT kernel ${clusterFun.name}`),
+            ...this.generateXrtInit("foo"),
             this.wl(),
 
             this.generateDebugInfo(debug, "Creating CPU-FPGA buffers"),
-            ...this.generateBufferObjects(wrapperFun),
+            ...this.generateBufferObjects(bridgeFun),
             this.wl(),
 
             this.generateDebugInfo(debug, "Copying data into buffers"),
-            ...this.generateWriteBufferSync(wrapperFun, inOuts),
+            ...this.generateWriteBufferSync(bridgeFun),
             this.wl(),
 
             this.generateDebugInfo(debug, "Preparing kernel run"),
-            ...this.generateKernelCall(wrapperFun),
+            ...this.generateKernelCall(bridgeFun),
             this.wl(),
 
             this.generateDebugInfo(debug, "Starting kernel..."),
@@ -38,7 +38,7 @@ export class XrtCxxBackend extends ABackend {
             this.wl(),
 
             this.generateDebugInfo(debug, "Copying data back from the buffers into the host"),
-            ...this.generateReadBufferSync(wrapperFun, inOuts)
+            ...this.generateReadBufferSync(bridgeFun)
         ];
 
         const body = ClavaJoinPoints.scope(...stmts);
@@ -121,16 +121,12 @@ std::ostream &timestamp(std::ostream &os)
         return stmts;
     }
 
-    private generateWriteBufferSync(wrapperFun: FunctionJp, inOuts: Map<string, ClusterInOut>): Statement[] {
+    private generateWriteBufferSync(wrapperFun: FunctionJp): Statement[] {
         const stmts: Statement[] = [];
 
         for (const param of wrapperFun.params) {
             if (param.type.isArray) {
                 const name = param.name;
-
-                if (inOuts.has(name) && inOuts.get(name) == ClusterInOut.WRITE) {
-                    continue;
-                }
                 const bufferName = `bo_${name}`;
 
                 const bufferStmts = [
@@ -165,16 +161,13 @@ std::ostream &timestamp(std::ostream &os)
         return stmts;
     }
 
-    private generateReadBufferSync(wrapperFun: FunctionJp, inOuts: Map<string, ClusterInOut>): Statement[] {
+    private generateReadBufferSync(wrapperFun: FunctionJp): Statement[] {
         const stmts: Statement[] = [];
 
         for (const param of wrapperFun.params) {
             if (param.type.isArray) {
                 const name = param.name;
 
-                if (inOuts.has(name) && inOuts.get(name) == ClusterInOut.READ) {
-                    continue;
-                }
                 const bufferName = `bo_${name}`;
 
                 const bufferStmts = [

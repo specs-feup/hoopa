@@ -25,12 +25,10 @@ export const enum HoopaAlgorithm {
 
 export const enum OffloadingBackend {
     AXI = "AXI",
-    CPU = "CPU",
     CUDA = "CUDA",
     OMPSS_FPGA = "OmpSs@FPGA",
     OPENCL = "OpenCL",
-    XRT = "XRT",
-    NONE = "None"
+    XRT = "XRT"
 }
 
 export type Target = {
@@ -199,10 +197,6 @@ export class HoopaConfig {
                 const validBackends = [];
                 for (const backend of this.backends) {
                     if (target.backends.includes(backend)) {
-                        validBackends.push(backend);
-                    }
-                    else if (backend == OffloadingBackend.CPU || backend == OffloadingBackend.NONE) {
-                        // CPU is always valid
                         validBackends.push(backend);
                     }
                 }

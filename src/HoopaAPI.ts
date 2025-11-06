@@ -4,7 +4,7 @@ import { HoopaAlgorithm, HoopaConfig, HoopaOutputDirectory, HoopaRun, Offloading
 import { AHoopaStage } from "./AHoopaStage.js";
 import { Cluster } from "@specs-feup/extended-task-graph/Cluster";
 import { ADecorator } from "./decorators/ADecorator.js";
-import { TaskGraphOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
+import { SourceCodeOutput, TaskGraphOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import { VitisDecorator } from "./decorators/VitisDecorator.js";
 import { PredefinedTasks, PredefinedTasksOptions } from "./algorithms/PredefinedTasks.js";
@@ -17,6 +17,7 @@ import { SynthesizabilityDecorator } from "./decorators/SynthesizabilityDecorato
 import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotExpansion.js";
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
+import { ClusterOutliner } from "@specs-feup/extended-task-graph/ClusterOutliner";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -212,15 +213,28 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string): void {
+        const outliner = new ClusterOutliner();
+        const outlineRes = outliner.outlineCluster(cluster);
+        if (outlineRes === null) {
+            this.logError("Cluster outlining failed, cannot proceed with offloading");
+            return;
+        }
+        const [_, bridgeFun, clusterFun] = outlineRes;
+
+        const outDir = `${alg}_cpu`;
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+        this.log(`Generated baseline partitioned code (i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+        this.log("Use this version as a sanity check to verify if the partitioning is valid");
+
         if (backends.length === 0) {
-            this.log("No backends to offload to");
+            this.log(`No backends to offload to, skipping offloading step`);
             return;
         }
 
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         for (const backend of backends) {
             const outDir = `${alg}_${backend.toLowerCase()}`;
-            offloader.offload(cluster, backend, outDir, false);
+            offloader.apply(clusterFun, bridgeFun, backend, outDir, false);
         }
     }
 }
