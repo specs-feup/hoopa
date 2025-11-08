@@ -126,7 +126,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS}/initial_runs.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_hls_estimates.json`;
                         this.applyDecoration(etg, vitisDecorator, path);
                         break;
                     }
@@ -213,7 +213,7 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string): void {
-        const outliner = new ClusterOutliner();
+        const outliner = new ClusterOutliner(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         const outlineRes = outliner.outlineCluster(cluster);
         if (outlineRes === null) {
             this.logError("Cluster outlining failed, cannot proceed with offloading");
@@ -221,13 +221,13 @@ export class HoopaAPI extends AHoopaStage {
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
 
-        const outDir = `${alg}_cpu`;
-        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
-        this.log(`Generated baseline partitioned code (i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
-        this.log("Use this version as a sanity check to verify if the partitioning is valid");
-
         if (backends.length === 0) {
-            this.log(`No backends to offload to, skipping offloading step`);
+            this.log(`No backends to offload to, outputting code as-is`);
+
+            const outDir = `${alg}_baseline`;
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+
+            this.log(`Generated baseline partitioned code (i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
             return;
         }
 
