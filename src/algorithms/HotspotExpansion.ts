@@ -13,6 +13,8 @@ import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlatten
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { MallocHoister } from "@specs-feup/clava-code-transforms/MallocHoister";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import { Call, DeclStmt, ExprStmt, If, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -425,7 +427,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             return cluster;
         }
 
-        const parent = task.getHierarchicalParent();
+        const parent = task.getHierarchicalParent() as RegularTask;
         if (parent == null) {
             this.log(" - Task has no parent, and therefore is the root task. Finished.");
             return cluster;
@@ -433,37 +435,18 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
         this.log(` - Trying to add siblings of ${task.getName()} to the cluster`);
         const siblings = parent.getHierarchicalChildren().filter(t => t.getId() !== task.getId());
-        const noChangeLimit = siblings.length + 1;
-        let noChangeCount = 0;
+        const parentHasIfs = Query.searchFrom(parent.getFunction(), If).get().length > 0;
+        const parentHasLoops = Query.searchFrom(parent.getFunction(), Loop).get().length > 0;
 
-        while (noChangeCount < noChangeLimit) {
-            const nextTask = siblings.shift()!;
-            if (nextTask === undefined) {
-                break;
-            }
-            // task is already in cluster
-            if (cluster.hasTask(nextTask)) {
-                continue;
-            }
-            // task is not synthesizable, and it can never be added
-            if (!this.isSynthesizable(nextTask, this.config.policies)) {
-                continue;
-            }
-            else {
-                // task is synthesizable, we try to add it
-                if (cluster.canAdd(nextTask)) {
-                    cluster.addTask(nextTask);
-                    this.log(` -- Added sibling task ${nextTask.getName()} to cluster`);
-                    noChangeCount = 0;
-                }
-                // if we cannot add it, we may need to wait for other siblings to be added first
-                // we put it back at the end of the list, and hope it can be added later
-                else {
-                    noChangeCount++;
-                    siblings.push(task);
-                }
-            }
-        };
+        if (parentHasIfs || parentHasLoops) {
+            this.log(` - Parent task ${parent.getName()} has control flow (ifs/loops), trying nested sibling addition`);
+            this.addSiblingsNested(cluster, task as RegularTask, siblings as RegularTask[]);
+        }
+        else {
+            this.log(` - Parent task ${parent.getName()} has no control flow, trying flat sibling addition`);
+            this.addSiblingsFlat(cluster, task, siblings);
+        }
+
         const clusterSize = cluster.getTasks().length;
         this.log(` - Finished adding ${clusterSize - 1} siblings ${task.getName()}`);
 
@@ -484,6 +467,137 @@ export class HotspotExpansion extends AHoopaAlgorithm {
             this.log(` - Could not add all siblings of ${task.getName()} to the cluster. Finished.`);
             return cluster;
         }
+    }
+
+    private addSiblingsFlat(cluster: Cluster, task: ConcreteTask, siblings: ConcreteTask[]): void {
+        const noChangeLimit = siblings.length + 1;
+        let noChangeCount = 0;
+
+        while (noChangeCount < noChangeLimit) {
+            const nextTask = siblings.shift()!;
+            if (nextTask === undefined) {
+                break;
+            }
+            // task is already in cluster
+            if (cluster.hasTask(nextTask)) {
+                continue;
+            }
+            // task is not synthesizable, and it can never be added
+            if (!this.isSynthesizable(nextTask, this.config.policies)) {
+                continue;
+            }
+            else {
+                // task is synthesizable, we try to add it
+                if (cluster.canAdd(nextTask)) {
+                    cluster.addTask(nextTask);
+                    //this.log(` -- Added sibling task ${nextTask.getName()} to cluster`);
+                    noChangeCount = 0;
+                }
+                // if we cannot add it, we may need to wait for other siblings to be added first
+                // we put it back at the end of the list, and hope it can be added later
+                else {
+                    noChangeCount++;
+                    siblings.push(task);
+                }
+            }
+        };
+    }
+
+    private addSiblingsNested(cluster: Cluster, task: RegularTask, siblings: RegularTask[]): void {
+        const parentTask = task.getHierarchicalParent() as RegularTask;
+        const parentFun = parentTask.getFunction();
+        const taskFromCall = (c: Call) => siblings.find(s => s.getCall()?.name === c.name);
+
+        // the good thing about working with a well-defined subset is that we know the maximum level of nesting
+        // and all combinations of if/loops that can appear. We can have:
+        // if { loop{} } else { loop{} }
+        // loop { if{} else{} } 
+        for (const stmt of parentFun.body.stmts) {
+            if (stmt instanceof ExprStmt) {
+                const [canAddFlag, siblingTask] = this.checkCallStmt(stmt, cluster, taskFromCall);
+                if (canAddFlag) {
+                    cluster.addTask(siblingTask!);
+                    //this.log(` -- Added sibling task ${siblingTask!.getName()} to cluster`);
+                }
+            }
+            else if (stmt instanceof If) {
+                const allStmt = [...stmt.then.stmts, ...stmt.else?.stmts || []];
+                const stmtToCheck: ExprStmt[] = [];
+
+                for (const innerStmt of allStmt) {
+                    if (innerStmt instanceof ExprStmt) {
+                        stmtToCheck.push(innerStmt);
+                    }
+                    else if (innerStmt instanceof Loop) {
+                        for (const loopStmt of innerStmt.body.stmts) {
+                            if (loopStmt instanceof ExprStmt) {
+                                stmtToCheck.push(loopStmt);
+                            }
+                        }
+                    }
+                }
+                this.addCallStmts(stmtToCheck, cluster, taskFromCall);
+            }
+            else if (stmt instanceof Loop) {
+                const stmtToCheck: ExprStmt[] = [];
+
+                for (const innerStmt of stmt.body.stmts) {
+                    if (innerStmt instanceof ExprStmt) {
+                        stmtToCheck.push(innerStmt);
+                    }
+                    else if (innerStmt instanceof If) {
+                        const allStmt = [...innerStmt.then.stmts, ...innerStmt.else?.stmts || []];
+                        for (const ifStmt of allStmt) {
+                            if (ifStmt instanceof ExprStmt) {
+                                stmtToCheck.push(ifStmt);
+                            }
+                        }
+                    }
+                }
+                for (const checkStmt of stmtToCheck) {
+                    this.checkCallStmt(checkStmt, cluster, taskFromCall);
+                }
+                this.addCallStmts(stmtToCheck, cluster, taskFromCall);
+            }
+            else if (stmt instanceof DeclStmt) {
+                continue;
+            }
+            else {
+                this.logWarning(`Unexpected statement type ${stmt.joinPointType} in parent function of task ${task.getName()}`);
+            }
+        }
+    }
+
+    private addCallStmts(stmts: ExprStmt[], cluster: Cluster, taskFromCall: (c: Call) => RegularTask | undefined): void {
+        const taskReadiness = stmts.map(s => this.checkCallStmt(s as ExprStmt, cluster, taskFromCall));
+        const allOk = taskReadiness.every(tr => tr[0]);
+        if (allOk) {
+            for (const [_, siblingTask] of taskReadiness) {
+                cluster.addTask(siblingTask!);
+                //this.log(` -- Added sibling task ${siblingTask!.getName()} to cluster`);  
+            }
+        }
+    }
+
+    private checkCallStmt(stmt: ExprStmt, cluster: Cluster, taskFromCall: (c: Call) => RegularTask | undefined): [boolean, RegularTask | null] {
+        const call = Query.searchFrom(stmt, Call).get()[0];
+        if (call == null) {
+            return [false, null];
+        }
+        const siblingTask = taskFromCall(call);
+        if (siblingTask == null) {
+            return [false, null];
+        }
+        // task is already in cluster
+        if (cluster.hasTask(siblingTask)) {
+            return [false, siblingTask];
+        }
+        // task is not synthesizable, skip
+        if (!this.isSynthesizable(siblingTask, this.config.policies)) {
+            return [false, siblingTask];
+        }
+        // task is synthesizable, we can check if we can add it
+        return [cluster.canAdd(siblingTask), siblingTask];
     }
 }
 

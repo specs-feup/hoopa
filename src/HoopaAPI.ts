@@ -217,6 +217,9 @@ export class HoopaAPI extends AHoopaStage {
         const outlineRes = outliner.outlineCluster(cluster);
         if (outlineRes === null) {
             this.logError("Cluster outlining failed, cannot proceed with offloading");
+            const outDir = `${alg}_failed_outlining`;
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+            this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
             return;
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
