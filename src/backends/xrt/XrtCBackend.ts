@@ -7,6 +7,7 @@ import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { MallocHoister } from "@specs-feup/clava-code-transforms/MallocHoister";
 import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlattener";
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -16,26 +17,26 @@ export class XrtCBackend extends ABackend {
     protected applyTransforms(clusterFun: FunctionJp, folderName: string): FunctionJp {
         const getFunction = () => Query.search(FunctionJp, (f) => (f.name == clusterFun.name && f.isImplementation)).first()!;
 
-        let fun = getFunction();
-        const inlined = this.applyInlining(clusterFun, folderName);
-        if (!inlined) {
-            this.log("Skipping remaining transforms due to inlining failure");
-            return getFunction();
-        }
+        // let fun = getFunction();
+        // const inlined = this.applyInlining(fun, folderName);
+        // if (!inlined) {
+        //     this.log("Skipping remaining transforms due to inlining failure");
+        //     return getFunction();
+        // }
 
-        fun = getFunction();
-        const hoisted = this.applyMallocHoisting(clusterFun, folderName);
-        if (!hoisted) {
-            this.log("Skipping remaining transforms due to malloc hoisting failure");
-            return getFunction();
-        }
+        // fun = getFunction();
+        // const hoisted = this.applyMallocHoisting(fun, folderName);
+        // if (!hoisted) {
+        //     this.log("Skipping remaining transforms due to malloc hoisting failure");
+        //     return getFunction();
+        // }
 
-        fun = getFunction();
-        const flattened = this.applyStructFlattening(clusterFun, folderName);
-        if (!flattened) {
-            this.log("Skipping remaining transforms due to struct flattening failure");
-            return getFunction();
-        }
+        // fun = getFunction();
+        // const flattened = this.applyStructFlattening(fun, folderName);
+        // if (!flattened) {
+        //     this.log("Skipping remaining transforms due to struct flattening failure");
+        //     return getFunction();
+        // }
 
         return getFunction();
     }
@@ -44,7 +45,7 @@ export class XrtCBackend extends ABackend {
         this.log("Applying call tree inlining");
         try {
             const inliner = new CallTreeInliner();
-            inliner.inlineCallTree(clusterFun, true);
+            inliner.inlineCallTree(clusterFun, false);
             this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/t1-inline`);
             this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/t1-inline`);
             Clava.rebuild();
@@ -90,6 +91,11 @@ export class XrtCBackend extends ABackend {
 
     protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
         this.logWarning("XRT C backend not implemented yet, outputting bridge function as-is");
+
+        const funDecl = clusterFun.getDeclaration(true);
+        const funDeclStmt = ClavaJoinPoints.stmtLiteral(`${funDecl};`);
+        bridgeFun.insertBefore(funDeclStmt);
+
         return bridgeFun.body!;
     }
 }
