@@ -15,37 +15,40 @@ export class XrtCBackend extends ABackend {
     }
 
     protected applyTransforms(clusterFun: FunctionJp, folderName: string): FunctionJp {
-        const getFunction = () => Query.search(FunctionJp, (f) => (f.name == clusterFun.name && f.isImplementation)).first()!;
+        let fun = this.regenClusterFunction(clusterFun.name);
+        const inlined = this.applyInlining(fun, folderName);
+        if (!inlined) {
+            this.log("Skipping remaining transforms due to inlining failure");
+            return this.regenClusterFunction(clusterFun.name);
+        }
 
-        // let fun = getFunction();
-        // const inlined = this.applyInlining(fun, folderName);
-        // if (!inlined) {
-        //     this.log("Skipping remaining transforms due to inlining failure");
-        //     return getFunction();
-        // }
-
-        // fun = getFunction();
+        // fun = this.regenClusterFunction(clusterFun.name);
         // const hoisted = this.applyMallocHoisting(fun, folderName);
         // if (!hoisted) {
         //     this.log("Skipping remaining transforms due to malloc hoisting failure");
-        //     return getFunction();
+        //     return this.regenClusterFunction(clusterFun.name);
         // }
 
-        // fun = getFunction();
+        // fun = this.regenClusterFunction(clusterFun.name);
         // const flattened = this.applyStructFlattening(fun, folderName);
         // if (!flattened) {
         //     this.log("Skipping remaining transforms due to struct flattening failure");
-        //     return getFunction();
+        //     return this.regenClusterFunction(clusterFun.name);
         // }
 
-        return getFunction();
+        return this.regenClusterFunction(clusterFun.name);
     }
 
     private applyInlining(clusterFun: FunctionJp, folderName: string): boolean {
         this.log("Applying call tree inlining");
         try {
             const inliner = new CallTreeInliner();
-            inliner.inlineCallTree(clusterFun, false);
+            inliner.inlineCallTree(clusterFun, true);
+            Clava.rebuild();
+
+            clusterFun = this.regenClusterFunction(clusterFun.name);
+            inliner.revertGlobalsToParams(clusterFun);
+
             this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/t1-inline`);
             this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folderName}/t1-inline`);
             Clava.rebuild();
@@ -97,5 +100,9 @@ export class XrtCBackend extends ABackend {
         bridgeFun.insertBefore(funDeclStmt);
 
         return bridgeFun.body!;
+    }
+
+    private regenClusterFunction(name: string): FunctionJp {
+        return Query.search(FunctionJp, (f) => (f.name == name && f.isImplementation)).first()!;
     }
 }
