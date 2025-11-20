@@ -152,6 +152,11 @@ export class HoopaAPI extends AHoopaStage {
                         const profName = `${this.getAppName()}_${profilerName}.json`;
                         const path = `${HoopaOutputDirectory.DECORATORS}/${profName}`;
                         this.applyDecoration(etg, profilingDecorator, path);
+
+                        const updated = profilingDecorator.fillInBlanks(etg, profilerName);
+                        if (updated) {
+                            this.log("Some tasks were missing profiling data, using estimated values where necessary");
+                        }
                         break;
                     }
                 default:

@@ -15,12 +15,12 @@ export class XrtCBackend extends ABackend {
     }
 
     protected applyTransforms(clusterFun: FunctionJp, folderName: string): FunctionJp {
-        let fun = this.regenClusterFunction(clusterFun.name);
-        const inlined = this.applyInlining(fun, folderName);
-        if (!inlined) {
-            this.log("Skipping remaining transforms due to inlining failure");
-            return this.regenClusterFunction(clusterFun.name);
-        }
+        // let fun = this.regenClusterFunction(clusterFun.name);
+        // const inlined = this.applyInlining(fun, folderName);
+        // if (!inlined) {
+        //     this.log("Skipping remaining transforms due to inlining failure");
+        //     return this.regenClusterFunction(clusterFun.name);
+        // }
 
         // fun = this.regenClusterFunction(clusterFun.name);
         // const hoisted = this.applyMallocHoisting(fun, folderName);

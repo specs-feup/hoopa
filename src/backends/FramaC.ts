@@ -1,4 +1,5 @@
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js"
+import chalk from "chalk";
 import { execSync } from "child_process";
 
 export class FramaC {
@@ -48,16 +49,20 @@ export class FramaC {
     }
 
     private runFramaC(command: string): string {
-        console.log(`[FramaC] Running command: ${command}`);
+        this.log(`Running command: ${command}`);
         try {
             const output = execSync(command, { encoding: "utf8" });
-            console.log(`[FramaC] Frama-C finished successfully`);
+            this.log(`Frama-C finished successfully`);
             return output;
         }
         catch (err) {
-            console.error(err);
+            this.log(`${err}`);
             return "";
         }
+    }
+
+    private log(msg: string): void {
+        console.log(`[${chalk.blue("Clava-FramaC")}] ${msg}`);
     }
 }
 

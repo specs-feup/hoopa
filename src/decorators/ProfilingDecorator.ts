@@ -51,6 +51,72 @@ export class ProfilingDecorator extends ADecorator {
         }
         return { "profiledExecTime": [thisProfilerData] };
     }
+
+    public fillInBlanks(etg: TaskGraph, profiler: string): boolean {
+        for (const task of etg.getTasks()) {
+            let profData = task.getAnnotation("profiledExecTime") as [ProfilerData];
+            if (profData && profData.some(p => p.profiler === profiler && p.percentage > 0.0)) {
+                continue;
+            }
+            const newProfData = {
+                "profiler": profiler,
+                "percentage": 0.0
+            }
+            task.setAnnotation("profiledExecTime", [newProfData]);
+        }
+        const orderedTasks = this.getHierarchicalOrder(etg);
+        let filledIn = false;
+
+        for (const task of orderedTasks) {
+            let profData = task.getAnnotation("profiledExecTime") as [ProfilerData];
+            if (profData && profData.some(p => p.percentage > 0.0)) {
+                continue;
+            }
+            const children = task.getHierarchicalChildren();
+            let totalPercentage = 0.0;
+            for (const child of children) {
+                const childProfData = child.getAnnotation("profiledExecTime") as [ProfilerData];
+                if (childProfData) {
+                    for (const pdata of childProfData) {
+                        if (pdata.profiler === profiler) {
+                            totalPercentage += pdata.percentage;
+                        }
+                    }
+                }
+            }
+            if (totalPercentage > 0.0) {
+                const newProfData = {
+                    "profiler": profiler,
+                    "percentage": totalPercentage
+                }
+                task.setAnnotation("profiledExecTime", [newProfData]);
+                filledIn = true;
+                this.log(`Estimated ${totalPercentage.toFixed(2)}% for task ${task.getName()}`);
+            }
+        }
+        return filledIn;
+    }
+
+    private getHierarchicalOrder(etg: TaskGraph): ConcreteTask[] {
+        const topTask = etg.getTopHierarchicalTask();
+        if (!topTask) {
+            return [];
+        }
+        const orderedTasks: ConcreteTask[] = [topTask];
+        for (const child of topTask.getHierarchicalChildren()) {
+            orderedTasks.push(...this.getHierarchicalLevel(child));
+        }
+        return orderedTasks.reverse();
+    }
+
+    private getHierarchicalLevel(task: ConcreteTask): ConcreteTask[] {
+        const orderedTasks: ConcreteTask[] = [...task.getHierarchicalChildren()];
+        for (const child of task.getHierarchicalChildren()) {
+            orderedTasks.push(...this.getHierarchicalLevel(child));
+        }
+        return orderedTasks;
+    }
+
 }
 
 export type ProfilerData = {
