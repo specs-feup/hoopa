@@ -508,10 +508,6 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         const parentFun = parentTask.getFunction();
         const taskFromCall = (c: Call) => siblings.find(s => s.getCall()?.name === c.name);
 
-        // the good thing about working with a well-defined subset is that we know the maximum level of nesting
-        // and all combinations of if/loops that can appear. We can have:
-        // if { loop{} } else { loop{} }
-        // loop { if{} else{} } 
         for (const stmt of parentFun.body.stmts) {
             if (stmt instanceof ExprStmt) {
                 const [canAddFlag, siblingTask] = this.checkCallStmt(stmt, cluster, taskFromCall);
@@ -520,44 +516,20 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                     //this.log(` -- Added sibling task ${siblingTask!.getName()} to cluster`);
                 }
             }
-            else if (stmt instanceof If) {
-                const allStmt = [...stmt.then.stmts, ...stmt.else?.stmts || []];
-                const stmtToCheck: ExprStmt[] = [];
+            else if (stmt instanceof If || stmt instanceof Loop) {
+                const allStmts = stmt instanceof If ? [...stmt.then.stmts, ...stmt.else?.stmts || []]
+                    : stmt.body.stmts;
+                const stmtsToCheck: ExprStmt[] = [];
 
-                for (const innerStmt of allStmt) {
+                for (const innerStmt of allStmts) {
                     if (innerStmt instanceof ExprStmt) {
-                        stmtToCheck.push(innerStmt);
-                    }
-                    else if (innerStmt instanceof Loop) {
-                        for (const loopStmt of innerStmt.body.stmts) {
-                            if (loopStmt instanceof ExprStmt) {
-                                stmtToCheck.push(loopStmt);
-                            }
-                        }
+                        stmtsToCheck.push(innerStmt);
                     }
                 }
-                this.addCallStmts(stmtToCheck, cluster, taskFromCall);
-            }
-            else if (stmt instanceof Loop) {
-                const stmtToCheck: ExprStmt[] = [];
-
-                for (const innerStmt of stmt.body.stmts) {
-                    if (innerStmt instanceof ExprStmt) {
-                        stmtToCheck.push(innerStmt);
-                    }
-                    else if (innerStmt instanceof If) {
-                        const allStmt = [...innerStmt.then.stmts, ...innerStmt.else?.stmts || []];
-                        for (const ifStmt of allStmt) {
-                            if (ifStmt instanceof ExprStmt) {
-                                stmtToCheck.push(ifStmt);
-                            }
-                        }
-                    }
-                }
-                for (const checkStmt of stmtToCheck) {
+                for (const checkStmt of stmtsToCheck) {
                     this.checkCallStmt(checkStmt, cluster, taskFromCall);
                 }
-                this.addCallStmts(stmtToCheck, cluster, taskFromCall);
+                this.addCallStmts(stmtsToCheck, cluster, taskFromCall);
             }
             else if (stmt instanceof DeclStmt) {
                 continue;
