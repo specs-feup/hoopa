@@ -400,21 +400,12 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         const taskScope = taskCall?.getAncestor("scope") as Scope;
 
         if (taskScope.parent instanceof If) {
-            if (task.getName() === "getInterpolatePatch_out1_rep8" || task.getName() === "getInterpolatePatch_out1_rep16") {
-                console.log("IN IF");
-            }
             this.addSiblingsInIf(cluster, task, taskScope);
         }
         else if (taskScope.parent instanceof Loop) {
-            if (task.getName() === "getInterpolatePatch_out1_rep8" || task.getName() === "getInterpolatePatch_out1_rep16") {
-                console.log("IN LOOP");
-            }
             this.addSiblingsInLoop(cluster, task, taskScope);
         }
         else if (taskScope.parent instanceof FunctionJp) {
-            if (task.getName() === "getInterpolatePatch_out1_rep8" || task.getName() === "getInterpolatePatch_out1_rep16") {
-                console.log("IN FUN");
-            }
             this.addSiblingsInFunction(cluster, task, taskScope);
         }
         else {
