@@ -164,3 +164,12 @@ export type SingleHotspotTaskOptions = HoopaAlgorithmOptions & {
     profiler?: string,
     percentageTarget?: number
 }
+
+export type SingleHotspotTaskReport = HoopaAlgorithmReport & {
+    cluster: {
+        name: string,
+        nTopLevelTasks: number,
+        nAllTasks: number,
+        value: number
+    }
+}

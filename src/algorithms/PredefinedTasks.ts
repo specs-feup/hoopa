@@ -24,14 +24,35 @@ export class PredefinedTasks extends AHoopaAlgorithm {
             }
         }
         this.log("PredefinedTasks algorithm finished");
-        return [cluster, { id: this.getName() }];
+        const report = this.buildReport(cluster);
+        return [cluster, report];
     }
 
     public getName(): string {
         return `alg_PredefinedTasks_${this.config.taskNames.join("_")}`;
     }
+
+    private buildReport(cluster: Cluster): PredefinedTasksReport {
+        const report = {
+            id: this.getName(),
+            cluster: {
+                name: cluster.getName(),
+                nTopLevelTasks: cluster.getTasks().length,
+                nAllTasks: cluster.getAllTasks().length
+            }
+        }
+        return report;
+    }
 }
 
 export type PredefinedTasksOptions = HoopaAlgorithmOptions & {
     taskNames: string[]
+}
+
+export type PredefinedTasksReport = HoopaAlgorithmReport & {
+    cluster: {
+        name: string,
+        nTopLevelTasks: number,
+        nAllTasks: number
+    }
 }
