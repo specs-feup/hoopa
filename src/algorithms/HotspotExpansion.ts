@@ -56,7 +56,7 @@ export class HotspotExpansion extends AHoopaAlgorithm {
 
         this.runHls(cluster, this.config.hlsSynthesis || false, this.config.hlsImplementation || false);
 
-        const report = this.createReport(cluster, hotspotTask, hotspotValue);
+        const report = this.createReport(cluster, clusterValue, hotspotTask, hotspotValue);
 
         this.log("HotspotExpansion algorithm finished");
         return [cluster, report];
@@ -105,14 +105,13 @@ export class HotspotExpansion extends AHoopaAlgorithm {
         return `alg_HotspotExpansion_${criterion}_${policies.join("-")}`;
     }
 
-    private createReport(cluster: Cluster, hotspotTask: ConcreteTask, hotspotValue: number): HotspotExpansionReport {
+    private createReport(cluster: Cluster, clusterValue: number, hotspotTask: ConcreteTask, hotspotValue: number): HotspotExpansionReport {
         const tempCluster = new Cluster();
         tempCluster.addTask(hotspotTask);
         const allHotspotTasks = tempCluster.getAllTasks().length;
         const hotspotStatements = ClusterUtils.getNumberOfStatements(tempCluster);
         const hotspotLinesOfCode = ClusterUtils.getLinesOfCode(tempCluster);
 
-        const clusterValue = this.getClusterValue(cluster);
         const clusterStatements = ClusterUtils.getNumberOfStatements(cluster);
         const clusterLinesOfCode = ClusterUtils.getLinesOfCode(cluster);
         const percentageOfHotspotStatements = hotspotStatements > 0 ? (clusterStatements / hotspotStatements * 100) : 0;
