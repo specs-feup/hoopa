@@ -23,16 +23,17 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.log(`Running SingleHotspotTask algorithm with "${this.config.precision}" precision`);
         const tasks = etg.getTasks();
         let currMaxTask = null;
+        let currMaxValue = 0;
 
         switch (this.config.criterion) {
             case HotspotCriterion.LATENCY:
-                currMaxTask = this.selectOnLatency(tasks);
+                [currMaxTask, currMaxValue] = this.selectOnLatency(tasks);
                 break;
             case HotspotCriterion.RESOURCES:
-                currMaxTask = this.selectOnResources(tasks);
+                [currMaxTask, currMaxValue] = this.selectOnResources(tasks);
                 break;
             case HotspotCriterion.COMPUTATION_PERCENTAGE:
-                currMaxTask = this.selectOnComputationPercentage(tasks);
+                [currMaxTask, currMaxValue] = this.selectOnComputationPercentage(tasks);
                 break;
             default:
                 this.logError(`Unknown hotspot criterion: ${this.config.criterion}`);
@@ -47,7 +48,22 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         this.log(`Created cluster with single hotspot task: ${currMaxTask.getName()}`);
 
         this.log("SingleHotspotTask algorithm finished");
-        return [cluster, { id: this.getName() }];
+        const report = this.buildReport(cluster, currMaxValue);
+        return [cluster, report];
+    }
+
+    private buildReport(cluster: Cluster, value: number): SingleHotspotTaskReport {
+        const allTasks = cluster.getAllTasks();
+        const report: SingleHotspotTaskReport = {
+            id: this.getName(),
+            cluster: {
+                name: cluster.getName(),
+                nTopLevelTasks: cluster.getTasks().length,
+                nAllTasks: allTasks.length,
+                value: value
+            }
+        };
+        return report;
     }
 
     public getName(): string {
@@ -68,11 +84,11 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         return `alg_SingleHotspotTask_${criterion}`;
     }
 
-    private selectOnLatency(tasks: ConcreteTask[]): ConcreteTask | null {
+    private selectOnLatency(tasks: ConcreteTask[]): [ConcreteTask | null, number] {
         return this.selectOnFpgaProperty(tasks);
     }
 
-    private selectOnResources(tasks: ConcreteTask[]): ConcreteTask | null {
+    private selectOnResources(tasks: ConcreteTask[]): [ConcreteTask | null, number] {
         return this.selectOnFpgaProperty(tasks, true);
     }
 
@@ -81,7 +97,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         return usage;
     }
 
-    private selectOnFpgaProperty(tasks: ConcreteTask[], useResources: boolean = false): ConcreteTask | null {
+    private selectOnFpgaProperty(tasks: ConcreteTask[], useResources: boolean = false): [ConcreteTask | null, number] {
         let currMaxCriterionValue = 0;
         let currMaxTask = null;
 
@@ -108,18 +124,18 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         } else {
             this.logError("No tasks with Vitis annotation found, cannot select hotspot task based on latency or resource usage");
         }
-        return currMaxTask;
+        return [currMaxTask, currMaxCriterionValue];
     }
 
-    private selectOnComputationPercentage(tasks: ConcreteTask[]): ConcreteTask | null {
+    private selectOnComputationPercentage(tasks: ConcreteTask[]): [ConcreteTask | null, number] {
         if (this.config.profiler == null) {
             this.logError("No profiler specified for computation percentage criterion");
-            return null;
+            return [null, -1];
         }
         const target = this.config.percentageTarget ?? SingleHotspotTask.DEFAULT_PERCENTAGE_TARGET;
         if (target <= 0 || target > 100) {
             this.logError("Percentage target must be in the range (0, 100]");
-            return null;
+            return [null, -1];
         }
         let closestTask = null;
         let closestDiff = 100;
@@ -148,7 +164,7 @@ export class SingleHotspotTask extends AHoopaAlgorithm {
         } else {
             this.logError("No tasks with the specified profiler annotation found, cannot select hotspot task based on computation percentage");
         }
-        return closestTask;
+        return [closestTask, currPercentage];
     }
 }
 

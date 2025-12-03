@@ -217,7 +217,12 @@ export class HoopaAPI extends AHoopaStage {
         return alg.run(etg);
     }
 
-    private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string): void {
+    private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string, outputBaseline: boolean = false): void {
+        if (backends.length === 0 && !outputBaseline) {
+            this.log("No backends to offload to, skipping offloading");
+            return;
+        }
+
         const outliner = new ClusterOutliner(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         const outlineRes = outliner.outlineCluster(cluster);
         if (outlineRes === null) {
@@ -229,7 +234,7 @@ export class HoopaAPI extends AHoopaStage {
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
 
-        if (backends.length === 0) {
+        if (backends.length === 0 && outputBaseline) {
             this.log(`No backends to offload to, outputting code as-is`);
 
             const outDir = `${alg}_baseline`;
