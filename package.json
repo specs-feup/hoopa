@@ -31,7 +31,9 @@
     "./HotspotExpansionOptions": "./dist/src/algorithms/HotspotExpansion.js",
     "./BuiltinFpgaPlatforms": "./dist/src/platforms/BuiltinFpgaPlatforms.js",
     "./BuiltinGpuPlatforms": "./dist/src/platforms/BuiltinGpuPlatforms.js",
-    "./FramaC": "./dist/src/backends/FramaC.js"
+    "./FramaC": "./dist/src/backends/FramaC.js",
+    "./InstrumentationAnnotator": "./dist/src/instrumentation/InstrumentationAnnotator.js",
+    "./InstrumentationInserter": "./dist/src/instrumentation/InstrumentationInserter.js"
   },
   "dependencies": {
     "@specs-feup/clava": "^3.0.8",
