@@ -1,4 +1,4 @@
-import { FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, FileJp, FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 import { AHoopaStage } from "../AHoopaStage.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import IdGenerator from "@specs-feup/lara/api/lara/util/IdGenerator.js";
@@ -51,7 +51,45 @@ export class InstrumentationInserter {
     }
 
     public instrumentMallocs(): number {
-        return 0;
+        const main = Query.search(FunctionJp, (f) => f.name == "main" && f.isImplementation).first();
+        if (!main) {
+            this.logger.logError("Main function not found for malloc instrumentation.");
+            return 0;
+        }
+        const mainFileName = (main.getAncestor("file") as FileJp).name;
+
+        // add extern declaration of file pointer to other files
+        for (const file of Query.search(FileJp, (f) => f.name.endsWith(".c"))) {
+            const isMainFile = file.name == mainFileName;
+
+            const filePtrDeclStr = `${isMainFile ? "" : "extern "}FILE* malloc_fptr;`;
+            const filePtrDeclStmt = ClavaJoinPoints.stmtLiteral(filePtrDeclStr);
+            const firstFun = Query.searchFrom(file, FunctionJp).first();
+            if (firstFun) {
+                firstFun.insertBefore(filePtrDeclStmt);
+            }
+            else {
+                file.insertEnd(filePtrDeclStmt);
+            }
+            file.addInclude("stdio.h", true);
+        }
+
+        // open file in main
+        const fopenStr = `malloc_fptr = fopen("malloc_sizes.csv", "w");`;
+        const fopenStmt = ClavaJoinPoints.stmtLiteral(fopenStr);
+        main.body.insertBegin(fopenStmt);
+
+        let mallocCount = 0;
+        for (const malloc of Query.search(Call, { name: "malloc" })) {
+            this.logger.log(` Instrumenting malloc at ${malloc.function!.name}:${malloc.line}`);
+            const sizeArg = malloc.args[0];
+
+            const fprintfStr = `fprintf(malloc_fptr, "${malloc.function!.name}:${malloc.line},%zu\\n", ${sizeArg.code});`;
+            const fprintfStmt = ClavaJoinPoints.stmtLiteral(fprintfStr);
+            malloc.getAncestor("statement").insertAfter(fprintfStmt);
+            mallocCount++;
+        }
+        return mallocCount;
     }
 
 }
