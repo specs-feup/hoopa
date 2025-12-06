@@ -1,5 +1,5 @@
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 import { EtgLogger } from "@specs-feup/extended-task-graph/EtgLogger";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { readFileSync } from "fs";
@@ -67,6 +67,7 @@ export class InstrumentationAnnotator {
 
     private annotateLoops(loopCounts: Record<string, [number, number, number]>): number {
         let annotatedLoops = 0;
+        this.functionCache.clear();
 
         for (const [location, stats] of Object.entries(loopCounts)) {
             const [funcName, lineStr] = location.split(":");
@@ -91,7 +92,26 @@ export class InstrumentationAnnotator {
 
     private annotateMallocs(mallocSizes: Record<string, [number, number, number]>): number {
         let annotatedMallocs = 0;
-        return 0;
+        for (const [location, stats] of Object.entries(mallocSizes)) {
+            const [funcName, lineStr] = location.split(":");
+            const line = parseInt(lineStr);
+            const [min, max, avg] = stats;
+
+            const mallocCall = Query.search(Call, (c) => {
+                return c.name == "malloc" && c.line == line;
+            }).get()[0];
+            if (!mallocCall) {
+                this.logger.logError(`Malloc at ${location} not found in function ${funcName}.`);
+                continue;
+            }
+
+            const pragmaStr = `#pragma clava malloc_size max=${max} min=${min} avg=${avg}`;
+            const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragmaStr);
+            mallocCall.getAncestor("statement").insertBefore(pragmaStmt);
+            annotatedMallocs++;
+            this.logger.log(` Annotated malloc at ${location} with malloc_size pragma.`);
+        }
+        return annotatedMallocs;
     }
 }
 

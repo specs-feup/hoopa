@@ -18,6 +18,10 @@ import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotE
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
 import { ClusterOutliner } from "@specs-feup/extended-task-graph/ClusterOutliner";
+import { InstrumentationInserter } from "./instrumentation/InstrumentationInserter.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import { Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { InstrumentationAnnotator } from "./instrumentation/InstrumentationAnnotator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -39,6 +43,52 @@ export class HoopaAPI extends AHoopaStage {
         this.run = runs[0];
     }
 
+    public runInstrumentation(skipCodeFlow: boolean = true): void {
+        this.logLine();
+        this.logStart();
+        this.log("Running Hoopa instrumentation for the current AST");
+
+        if (!skipCodeFlow) {
+            this.log("Starting code transformation flow...");
+            this.etgApi.runCodeTransformationFlow(this.transFlowConfig);
+            this.log("Code transformation flow finished");
+        }
+
+        const instrumenter = new InstrumentationInserter(this.getOutputDir(), this.getAppName());
+        const validFuns = this.getValidFunctions().filter((f) => {
+            return Query.searchFrom(f, Loop).get().length > 0
+        });
+        for (const fun of validFuns) {
+            instrumenter.instrumentLoops(fun);
+        }
+        instrumenter.instrumentMallocs();
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/trans-instrumented`);
+
+        this.log("Finished running Hoopa instrumentation");
+        this.logEnd();
+        this.logLine();
+    }
+
+    public runInstrumentationAnnotation(annotationsFile: string, skipCodeFlow: boolean = true): void {
+        this.logLine();
+        this.logStart();
+        this.log("Running Hoopa instrumentation (annotation-based) for the current AST");
+
+        if (!skipCodeFlow) {
+            this.log("Starting code transformation flow...");
+            this.etgApi.runCodeTransformationFlow(this.transFlowConfig);
+            this.log("Code transformation flow finished");
+        }
+
+        const annotator = new InstrumentationAnnotator(this.getOutputDir(), this.getAppName());
+        annotator.annotateAll(annotationsFile);
+        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/trans-annotated`);
+
+        this.log("Finished running Hoopa instrumentation (annotation-based)");
+        this.logEnd();
+        this.logLine();
+    }
+
     public runFromStart(skipCodeFlow: boolean = true): void {
         this.logLine();
         this.logStart();
@@ -46,13 +96,13 @@ export class HoopaAPI extends AHoopaStage {
 
         const runConfig = this.run;
         this.logLine();
-        this.log(`Running Hoopa for run configuration:`);
-        this.log(` name:         ${runConfig.variant}`);
-        this.log(` decorators:   ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
-        this.log(` algorithm:    ${runConfig.algorithm}`);
-        this.log(` alg. options: ${JSON.stringify(runConfig.algorithmOptions)}`);
-        this.log(` backends:     ${runConfig.backends.join(", ")}`);
-        this.log(` target:       ${runConfig.target.name}`);
+        this.log(`Current configuration is: `);
+        this.log(` name: ${runConfig.variant}`);
+        this.log(` decorators: ${runConfig.decorators.length > 0 ? runConfig.decorators.join(", ") : "none"}`);
+        this.log(` algorithm: ${runConfig.algorithm}`);
+        this.log(` alg.options: ${JSON.stringify(runConfig.algorithmOptions)}`);
+        this.log(` backends: ${runConfig.backends.join(", ")}`);
+        this.log(` target: ${runConfig.target.name}`);
 
         const etg = this.getTaskGraph(skipCodeFlow);
         if (!etg) {
@@ -64,7 +114,7 @@ export class HoopaAPI extends AHoopaStage {
         this.runHoopa(etg, runConfig);
         this.logLine();
 
-        this.log("Finished running Hoopa for all run configurations");
+        this.log("Finished running Hoopa");
         this.logEnd();
         this.logLine();
     }
@@ -100,7 +150,7 @@ export class HoopaAPI extends AHoopaStage {
         const dotConverter = new DotConverter();
         const dot = dotConverter.convertCluster(cluster, etg);
         this.saveToFileInSubfolder(dot, filename, HoopaOutputDirectory.CLUSTERS);
-        this.log(`Saved cluster dot to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
+        this.log(`Saved cluster dot to ${HoopaOutputDirectory.CLUSTERS} / ${filename}`);
     }
 
     private saveClusterData(cluster: HoopaAlgorithmReport): void {
@@ -108,7 +158,7 @@ export class HoopaAPI extends AHoopaStage {
         const filename = `${id}_data.json`;
         const json = JSON.stringify(cluster, null, 4);
         this.saveToFileInSubfolder(json, filename, HoopaOutputDirectory.CLUSTERS);
-        this.log(`Saved cluster data to ${HoopaOutputDirectory.CLUSTERS}/${filename}`);
+        this.log(`Saved cluster data to ${HoopaOutputDirectory.CLUSTERS} / ${filename}`);
     }
 
     private decorate(etg: TaskGraph, decorators: [TaskGraphDecorator, string][]): void {
@@ -126,7 +176,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_hls_estimates.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS} / etg_hls_estimates.json`;
                         this.applyDecoration(etg, vitisDecorator, path);
                         break;
                     }
@@ -137,7 +187,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS} / etg_synthesizability.json`;
                         this.applyDecoration(etg, synthDecorator, path);
                         break;
                     }
@@ -150,7 +200,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getAppName(),
                             profilerName);
                         const profName = `${this.getAppName()}_${profilerName}.json`;
-                        const path = `${HoopaOutputDirectory.DECORATORS}/${profName}`;
+                        const path = `${HoopaOutputDirectory.DECORATORS} / ${profName}`;
                         this.applyDecoration(etg, profilingDecorator, path);
 
                         const updated = profilingDecorator.fillInBlanks(etg, profilerName);
@@ -167,7 +217,7 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private applyDecoration(etg: TaskGraph, decorator: ADecorator, cachedRes: string): void {
-        const fullCachedRes = `${this.getOutputDir()}/${cachedRes}`;
+        const fullCachedRes = `${this.getOutputDir()} / ${cachedRes}`;
         if (Io.isFile(fullCachedRes)) {
             decorator.applyCachedDecorations(etg, fullCachedRes);
         }
@@ -179,7 +229,7 @@ export class HoopaAPI extends AHoopaStage {
         }
 
         const dot = decorator.getDotfile(etg);
-        const etgSubdir = `${TaskGraphOutput.ETG_PARENT}/decorated`;
+        const etgSubdir = `${TaskGraphOutput.ETG_PARENT} / decorated`;
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
@@ -228,19 +278,19 @@ export class HoopaAPI extends AHoopaStage {
         if (outlineRes === null) {
             this.logError("Cluster outlining failed, cannot proceed with offloading");
             const outDir = `${alg}_failed_outlining`;
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
-            this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
+            this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
             return;
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
 
         if (backends.length === 0 && outputBaseline) {
-            this.log(`No backends to offload to, outputting code as-is`);
+            this.log(`No backends to offload to, outputting code as- is`);
 
             const outDir = `${alg}_baseline`;
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
 
-            this.log(`Generated baseline partitioned code (i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+            this.log(`Generated baseline partitioned code(i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
             return;
         }
 

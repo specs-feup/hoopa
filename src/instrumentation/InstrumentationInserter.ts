@@ -12,7 +12,7 @@ export class InstrumentationInserter {
     }
 
     public instrumentLoops(fun: FunctionJp): number {
-        this.logger.log(`Instrumenting loops in function ${fun.name}`);
+        this.logger.log(`Instrumenting loops in ${fun.name}`);
         let loopCount = 0;
 
         // file pointer declared just before the function
@@ -26,7 +26,7 @@ export class InstrumentationInserter {
         fun.body.insertBegin(fopenStmt);
 
         for (const loop of Query.searchFrom(fun, Loop)) {
-            this.logger.log(` Instrumenting loop at ${fun.name}:${loop.line}`);
+            this.logger.log(`  Instr. loop at ${fun.name}:${loop.line}`);
 
             // declare loop counter before the loop
             const loopCounterName = IdGenerator.next("_loop_cntr_")
@@ -51,6 +51,8 @@ export class InstrumentationInserter {
     }
 
     public instrumentMallocs(): number {
+        this.logger.log(`Instrumenting malloc calls in the program`);
+
         const main = Query.search(FunctionJp, (f) => f.name == "main" && f.isImplementation).first();
         if (!main) {
             this.logger.logError("Main function not found for malloc instrumentation.");
@@ -81,7 +83,7 @@ export class InstrumentationInserter {
 
         let mallocCount = 0;
         for (const malloc of Query.search(Call, { name: "malloc" })) {
-            this.logger.log(` Instrumenting malloc at ${malloc.function!.name}:${malloc.line}`);
+            this.logger.log(`  Instr. malloc at ${malloc.function!.name}:${malloc.line}`);
             const sizeArg = malloc.args[0];
 
             const fprintfStr = `fprintf(malloc_fptr, "${malloc.function!.name}:${malloc.line},%zu\\n", ${sizeArg.code});`;
