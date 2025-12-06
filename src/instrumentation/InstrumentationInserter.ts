@@ -1,5 +1,4 @@
 import { Call, FileJp, FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
-import { AHoopaStage } from "../AHoopaStage.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import IdGenerator from "@specs-feup/lara/api/lara/util/IdGenerator.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
@@ -9,7 +8,7 @@ export class InstrumentationInserter {
     private logger: EtgLogger;
 
     constructor(outputDir: string, appName: string) {
-        this.logger = new EtgLogger("InstrumentationInserter", outputDir, appName, "Hoopa");
+        this.logger = new EtgLogger("InstrInserter", outputDir, appName, "Hoopa");
     }
 
     public instrumentLoops(fun: FunctionJp): number {
@@ -31,7 +30,8 @@ export class InstrumentationInserter {
 
             // declare loop counter before the loop
             const loopCounterName = IdGenerator.next("_loop_cntr_")
-            const loopCounterDecl = ClavaJoinPoints.varDecl(loopCounterName, ClavaJoinPoints.integerLiteral(0));
+            const literalZero = ClavaJoinPoints.integerLiteral(0);
+            const loopCounterDecl = ClavaJoinPoints.varDecl(loopCounterName, literalZero);
             const declStmt = ClavaJoinPoints.declStmt(loopCounterDecl);
             loop.insertBefore(declStmt);
 
