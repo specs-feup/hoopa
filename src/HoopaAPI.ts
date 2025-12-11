@@ -18,10 +18,8 @@ import { HotspotExpansion, HotspotExpansionOptions } from "./algorithms/HotspotE
 import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
 import { ClusterOutliner } from "@specs-feup/extended-task-graph/ClusterOutliner";
-import { InstrumentationInserter } from "./instrumentation/InstrumentationInserter.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { Loop } from "@specs-feup/clava/api/Joinpoints.js";
-import { InstrumentationAnnotator } from "./instrumentation/InstrumentationAnnotator.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -41,52 +39,6 @@ export class HoopaAPI extends AHoopaStage {
             this.logWarning("Support for multiple runs will be added in future versions");
         }
         this.run = runs[0];
-    }
-
-    public runInstrumentation(skipCodeFlow: boolean = true): void {
-        this.logLine();
-        this.logStart();
-        this.log("Running Hoopa instrumentation for the current AST");
-
-        if (!skipCodeFlow) {
-            this.log("Starting code transformation flow...");
-            this.etgApi.runCodeTransformationFlow(this.transFlowConfig);
-            this.log("Code transformation flow finished");
-        }
-
-        const instrumenter = new InstrumentationInserter(this.getOutputDir(), this.getAppName());
-        const validFuns = this.getValidFunctions().filter((f) => {
-            return Query.searchFrom(f, Loop).get().length > 0
-        });
-        for (const fun of validFuns) {
-            instrumenter.instrumentLoops(fun);
-        }
-        instrumenter.instrumentMallocs();
-        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/trans-instrumented`);
-
-        this.log("Finished running Hoopa instrumentation");
-        this.logEnd();
-        this.logLine();
-    }
-
-    public runInstrumentationAnnotation(annotationsFile: string, skipCodeFlow: boolean = true): void {
-        this.logLine();
-        this.logStart();
-        this.log("Running Hoopa instrumentation (annotation-based) for the current AST");
-
-        if (!skipCodeFlow) {
-            this.log("Starting code transformation flow...");
-            this.etgApi.runCodeTransformationFlow(this.transFlowConfig);
-            this.log("Code transformation flow finished");
-        }
-
-        const annotator = new InstrumentationAnnotator(this.getOutputDir(), this.getAppName());
-        annotator.annotateAll(annotationsFile);
-        this.generateCode(`${SourceCodeOutput.SRC_PARENT}/trans-annotated`);
-
-        this.log("Finished running Hoopa instrumentation (annotation-based)");
-        this.logEnd();
-        this.logLine();
     }
 
     public runFromStart(skipCodeFlow: boolean = true): void {
