@@ -31,7 +31,8 @@
     "./HotspotExpansionOptions": "./dist/src/algorithms/HotspotExpansion.js",
     "./BuiltinFpgaPlatforms": "./dist/src/platforms/BuiltinFpgaPlatforms.js",
     "./BuiltinGpuPlatforms": "./dist/src/platforms/BuiltinGpuPlatforms.js",
-    "./FramaC": "./dist/src/backends/FramaC.js"
+    "./FramaC": "./dist/src/backends/FramaC.js",
+    "./HlsDeadCodeEliminator": "./dist/src/backends/HlsDeadCodeEliminator.js"
   },
   "dependencies": {
     "@specs-feup/clava": "^3.0.8",
