@@ -128,7 +128,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS} / etg_hls_estimates.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_hls_estimates.json`;
                         this.applyDecoration(etg, vitisDecorator, path);
                         break;
                     }
@@ -139,7 +139,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getOutputDir(),
                             this.getAppName(),
                             "vitis_hls/initial_runs");
-                        const path = `${HoopaOutputDirectory.DECORATORS} / etg_synthesizability.json`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/etg_synthesizability.json`;
                         this.applyDecoration(etg, synthDecorator, path);
                         break;
                     }
@@ -152,7 +152,7 @@ export class HoopaAPI extends AHoopaStage {
                             this.getAppName(),
                             profilerName);
                         const profName = `${this.getAppName()}_${profilerName}.json`;
-                        const path = `${HoopaOutputDirectory.DECORATORS} / ${profName}`;
+                        const path = `${HoopaOutputDirectory.DECORATORS}/${profName}`;
                         this.applyDecoration(etg, profilingDecorator, path);
 
                         const updated = profilingDecorator.fillInBlanks(etg, profilerName);
@@ -169,7 +169,7 @@ export class HoopaAPI extends AHoopaStage {
     }
 
     private applyDecoration(etg: TaskGraph, decorator: ADecorator, cachedRes: string): void {
-        const fullCachedRes = `${this.getOutputDir()} / ${cachedRes}`;
+        const fullCachedRes = `${this.getOutputDir()}/${cachedRes}`;
         if (Io.isFile(fullCachedRes)) {
             decorator.applyCachedDecorations(etg, fullCachedRes);
         }
@@ -181,7 +181,7 @@ export class HoopaAPI extends AHoopaStage {
         }
 
         const dot = decorator.getDotfile(etg);
-        const etgSubdir = `${TaskGraphOutput.ETG_PARENT} / decorated`;
+        const etgSubdir = `${TaskGraphOutput.ETG_PARENT}/decorated`;
         this.saveToFileInSubfolder(dot, `taskgraph_${decorator.getLabels().join("_").toLowerCase()}.dot`, etgSubdir);
     }
 
@@ -230,8 +230,8 @@ export class HoopaAPI extends AHoopaStage {
         if (outlineRes === null) {
             this.logError("Cluster outlining failed, cannot proceed with offloading");
             const outDir = `${alg}_failed_outlining`;
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
-            this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
+            this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT} ${outDir}`);
             return;
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
@@ -240,9 +240,9 @@ export class HoopaAPI extends AHoopaStage {
             this.log(`No backends to offload to, outputting code as- is`);
 
             const outDir = `${alg}_baseline`;
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
 
-            this.log(`Generated baseline partitioned code(i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT} / ${outDir}`);
+            this.log(`Generated baseline partitioned code(i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
             return;
         }
 

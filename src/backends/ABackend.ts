@@ -3,7 +3,6 @@ import { FunctionJp, Scope } from "@specs-feup/clava/api/Joinpoints.js";
 import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import { AHoopaStage } from "../AHoopaStage.js";
 import { FramaC } from "./FramaC.js";
-import Io from "@specs-feup/lara/api/lara/Io.js";
 
 export abstract class ABackend extends AHoopaStage {
     private backendName: string;
@@ -34,9 +33,10 @@ export abstract class ABackend extends AHoopaStage {
             this.log(`Debug code generated at ${basePath}/final-debug`);
         }
         else {
-            this.generateCode(`${basePath}/final`);
-            this.log(`Code generated at ${basePath}/final`);
-            this.generateFramaCReport(clusterFun, basePath);
+            //this.generateCode(`${basePath}/final`);
+            //this.log(`Code generated at ${basePath}/final`);
+            //this.generateFramaCReport(clusterFun, basePath);
+            this.logWarning("Writing final code is disabled for now.");
         }
         Clava.popAst();
 
