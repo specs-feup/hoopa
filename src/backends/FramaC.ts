@@ -1,22 +1,25 @@
-import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js"
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { FileJp, FunctionJp, Statement, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js"
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
 export class FramaC {
     constructor() { }
 
-    public getStatsForFunction(fun: FunctionJp, dir: string): FramaCFunctionReport {
-        const file = fun.filename;
-        const path = `${dir}/${file}`;
-        const functionName = fun.name;
-
+    public getStatsForFile(file: FileJp, dir: string): FramaCFileReport {
+        const path = `${dir}/${file.filename}`;
         const command = `frama-c -metrics -metrics-by-function ${path}`;
+
+        const pragmas = this.disablePragmas(file, dir);
         const output = this.runFramaC(command);
+        this.reenablePragmas(pragmas, dir);
 
         if (output === "") {
             return nullReport;
         }
-        const splitOutput = output.split(functionName);
+        const splitOutput = output.split("Global metrics");
         if (splitOutput.length < 2) {
             return nullReport;
         }
@@ -30,22 +33,47 @@ export class FramaC {
             return Number(parts[1].trim());
         }
 
-        const report: FramaCFunctionReport = {
-            name: functionName,
-            sloc: toNumber(lines[2]),
-            decisionPoints: toNumber(lines[3]),
-            globalVariables: toNumber(lines[4]),
-            ifs: toNumber(lines[5]),
-            loops: toNumber(lines[6]),
-            gotos: toNumber(lines[7]),
-            assignments: toNumber(lines[8]),
-            exitPoints: toNumber(lines[9]),
-            functions: toNumber(lines[10]),
-            functionCalls: toNumber(lines[11]),
-            pointerDereferences: toNumber(lines[12]),
-            cyclomaticComplexity: toNumber(lines[13])
+        const report: FramaCFileReport = {
+            name: file.filename,
+            sloc: toNumber(lines[1]),
+            decisionPoints: toNumber(lines[2]),
+            globalVariables: toNumber(lines[3]),
+            ifs: toNumber(lines[4]),
+            loops: toNumber(lines[5]),
+            gotos: toNumber(lines[6]),
+            assignments: toNumber(lines[7]),
+            exitPoints: toNumber(lines[8]),
+            functions: toNumber(lines[9]),
+            functionCalls: toNumber(lines[10]),
+            pointerDereferences: toNumber(lines[11]),
+            cyclomaticComplexity: toNumber(lines[12])
         };
         return report;
+    }
+
+    private disablePragmas(file: FileJp, dir: string): Statement[] {
+        const pragmas = Query.searchFrom(file, WrapperStmt, (stmt) => {
+            const code = stmt.code.trim();
+            return code.startsWith("#pragma");
+        }).get();
+        const comments: Statement[] = pragmas.map((pragma) => {
+            const commented = ClavaJoinPoints.stmtLiteral(`// ${pragma.code}`);
+            pragma.replaceWith(commented);
+            return commented;
+        });
+        Clava.writeCode(dir);
+        this.log(`Disabled ${comments.length} pragmas in file ${file.filename}`);
+        return comments;
+    }
+
+    private reenablePragmas(comments: Statement[], dir: string): void {
+        comments.forEach((comment) => {
+            const code = comment.code.trim().substring(2).trim();
+            const pragma = ClavaJoinPoints.stmtLiteral(code);
+            comment.replaceWith(pragma);
+        });
+        Clava.writeCode(dir);
+        this.log(`Re-enabled ${comments.length} pragmas`);
     }
 
     private runFramaC(command: string): string {
@@ -66,7 +94,7 @@ export class FramaC {
     }
 }
 
-export type FramaCFunctionReport = {
+export type FramaCFileReport = {
     name: string;
     sloc: number;
     decisionPoints: number;
@@ -82,7 +110,7 @@ export type FramaCFunctionReport = {
     cyclomaticComplexity: number;
 };
 
-export const nullReport: FramaCFunctionReport = {
+export const nullReport: FramaCFileReport = {
     name: "<null>",
     sloc: 0,
     decisionPoints: 0,
