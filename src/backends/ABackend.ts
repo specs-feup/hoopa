@@ -49,15 +49,4 @@ export abstract class ABackend extends AHoopaStage {
     }
 
     protected abstract buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope;
-
-    private generateFramaCReport(clusterFun: FunctionJp, basePath: string) {
-        const framaC = new FramaC();
-        const report = framaC.getStatsForFunction(clusterFun, `${this.getOutputDir()}/${basePath}/final`);
-
-        const jsonReport = JSON.stringify(report, null, 4);
-        const reportName = `frama-c-report-final.json`;
-        const reportDir = `${basePath}/final`;
-        this.saveToFileInSubfolder(jsonReport, reportName, reportDir);
-        this.log(`Frama-C report saved to ${basePath}/${reportName}`);
-    }
 }

@@ -9,12 +9,8 @@ import { FpgaResourceUsageEstimator } from "./FpgaResourceUsageEstimator.js";
 import { ProfilerData } from "../decorators/ProfilingDecorator.js";
 import { HlsError } from "../decorators/SynthesizabilityDecorator.js";
 import { RegularTask } from "@specs-feup/extended-task-graph/RegularTask";
-import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlattener";
-import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
-import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { MallocHoister } from "@specs-feup/clava-code-transforms/MallocHoister";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { Call, DeclStmt, ExprStmt, FunctionJp, If, Loop, Scope } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, FunctionJp, If, Loop, Scope } from "@specs-feup/clava/api/Joinpoints.js";
 
 export class HotspotExpansion extends AHoopaAlgorithm {
     private config: HotspotExpansionOptions;
@@ -284,6 +280,16 @@ export class HotspotExpansion extends AHoopaAlgorithm {
                 return false;
             }
             if (!policies.includes(policyOfError)) {
+                return false;
+            }
+        }
+        // current task is synthesizable, but that doesn't tell us the full picture.
+        // due to how Vitis reports errors, the task's subtasks may have errors not reported at the parent level.
+        // so now we also check every subtask recursively.
+        const children = task.getHierarchicalChildren();
+        for (const child of children) {
+            const childSynth = this.isSynthesizable(child, policies);
+            if (!childSynth) {
                 return false;
             }
         }
