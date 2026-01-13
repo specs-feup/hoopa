@@ -128,7 +128,8 @@ export class HlsDeadCodeEliminator extends AdvancedTransform {
             });
             deadLoops.forEach(loop => {
                 try {
-                    loop.detach();
+                    const note = ClavaJoinPoints.stmtLiteral("// Dead loop removed by HLS DCE, make sure it has the #pragma hls loop_tripcount directive even if it has static bounds\n");
+                    loop.replaceWith(note);
                     this.log(`    Removed dead loop at ${loop.location}`);
                     removedLoops++;
                 }
