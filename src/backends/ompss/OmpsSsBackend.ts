@@ -7,9 +7,4 @@ export class OmpSsBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
         super(topFunctionName, outputDir, appName, "OmpSs@FPGA");
     }
-
-    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
-        this.logWarning("OmpSs backend not implemented yet, outputting the same bridge function");
-        return bridgeFun.body!;
-    }
 }

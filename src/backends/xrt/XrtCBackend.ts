@@ -14,7 +14,7 @@ export class XrtCBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected applyTransforms(clusterFun: FunctionJp, folderName: string): FunctionJp {
+    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): [FunctionJp, FunctionJp] {
         // let fun = this.regenClusterFunction(clusterFun.name);
         // const inlined = this.applyInlining(fun, folderName);
         // if (!inlined) {
@@ -36,7 +36,7 @@ export class XrtCBackend extends ABackend {
         //     return this.regenClusterFunction(clusterFun.name);
         // }
 
-        return this.regenClusterFunction(clusterFun.name);
+        return [this.regenFunction(clusterFun.name), this.regenFunction(bridgeFun.name)];
     }
 
     private applyInlining(clusterFun: FunctionJp, folderName: string): boolean {
@@ -46,7 +46,7 @@ export class XrtCBackend extends ABackend {
             inliner.inlineCallTree(clusterFun, true);
             Clava.rebuild();
 
-            clusterFun = this.regenClusterFunction(clusterFun.name);
+            clusterFun = this.regenFunction(clusterFun.name);
             inliner.revertGlobalsToParams(clusterFun);
 
             this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folderName}/t1-inline`);
@@ -90,19 +90,5 @@ export class XrtCBackend extends ABackend {
             this.logError(`Error during struct flattening: ${e}`);
             return false;
         }
-    }
-
-    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
-        this.logWarning("XRT C backend not implemented yet, outputting bridge function as-is");
-
-        const funDecl = clusterFun.getDeclaration(true);
-        const funDeclStmt = ClavaJoinPoints.stmtLiteral(`${funDecl};`);
-        bridgeFun.insertBefore(funDeclStmt);
-
-        return bridgeFun.body!;
-    }
-
-    private regenClusterFunction(name: string): FunctionJp {
-        return Query.search(FunctionJp, (f) => (f.name == name && f.isImplementation)).first()!;
     }
 }

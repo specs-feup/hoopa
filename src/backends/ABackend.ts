@@ -3,6 +3,7 @@ import { FunctionJp, Scope } from "@specs-feup/clava/api/Joinpoints.js";
 import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
 import { AHoopaStage } from "../AHoopaStage.js";
 import { FramaC } from "./FramaC.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export abstract class ABackend extends AHoopaStage {
     private backendName: string;
@@ -23,10 +24,8 @@ export abstract class ABackend extends AHoopaStage {
         this.generateCode(`${basePath}/baseline`);
         this.log(`Code generated at ${basePath}/baseline`);
 
-        clusterFun = this.applyTransforms(clusterFun, folderName);
-
-        const body = this.buildBody(clusterFun, bridgeFun, debug);
-        bridgeFun.body.replaceWith(body);
+        [clusterFun, bridgeFun] = this.applyTransforms(clusterFun, bridgeFun, folderName);
+        [clusterFun, bridgeFun] = this.buildBody(clusterFun, bridgeFun, folderName, debug);
 
         if (debug) {
             this.generateCode(`${basePath}/final-debug`);
@@ -43,10 +42,17 @@ export abstract class ABackend extends AHoopaStage {
         return true;
     }
 
-    protected applyTransforms(clusterFun: FunctionJp, folderName: string): FunctionJp {
+    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): [FunctionJp, FunctionJp] {
         this.log(`No transforms applied for backend ${this.backendName}`);
-        return clusterFun;
+        return [clusterFun, bridgeFun];
     }
 
-    protected abstract buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope;
+    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
+        this.log(`No body generation implemented for backend ${this.backendName}`);
+        return [clusterFun, bridgeFun];
+    }
+
+    protected regenFunction(name: string): FunctionJp {
+        return Query.search(FunctionJp, (f) => (f.name == name && f.isImplementation)).first()!;
+    }
 }

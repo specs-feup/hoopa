@@ -19,7 +19,7 @@ import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
 import { ClusterOutliner } from "@specs-feup/extended-task-graph/ClusterOutliner";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -41,7 +41,7 @@ export class HoopaAPI extends AHoopaStage {
         this.run = runs[0];
     }
 
-    public runFromStart(skipCodeFlow: boolean = true): void {
+    public runFromStart(skipCodeFlow: boolean = true): boolean {
         this.logLine();
         this.logStart();
         this.log("Running Hoopa for the current AST");
@@ -59,16 +59,22 @@ export class HoopaAPI extends AHoopaStage {
         const etg = this.getTaskGraph(skipCodeFlow);
         if (!etg) {
             this.logError("ETG generation failed!");
-            return;
+            return false;
         }
         this.log("ETG generated successfully!");
 
-        this.runHoopa(etg, runConfig);
+        const ok = this.runHoopa(etg, runConfig);
         this.logLine();
 
-        this.log("Finished running Hoopa");
+        if (!ok) {
+            this.logError("Hoopa run failed!");
+        }
+        else {
+            this.log("Finished running Hoopa");
+        }
         this.logEnd();
         this.logLine();
+        return ok;
     }
 
     private getTaskGraph(skipCodeFlow: boolean): TaskGraph | null {
@@ -83,7 +89,7 @@ export class HoopaAPI extends AHoopaStage {
         return etg;
     }
 
-    private runHoopa(etg: TaskGraph, config: HoopaRun): void {
+    private runHoopa(etg: TaskGraph, config: HoopaRun): boolean {
         this.log("Starting ETG decoration")
         this.decorate(etg, config.decorators);
 
@@ -93,8 +99,15 @@ export class HoopaAPI extends AHoopaStage {
         this.saveClusterDot(cluster, etg, report.id);
         this.saveClusterData(report);
 
-        this.log("Starting offloading");
-        this.offload(cluster, config.backends, report.id);
+        this.log("Starting hw/sw splitting");
+        const [bridgeFun, hwFun] = this.splitHardwareSoftware(cluster, report.id);
+        if (bridgeFun === null || hwFun === null) {
+            this.logError("Hardware/software splitting failed, cannot proceed with offloading");
+            return false;
+        }
+
+        this.log("Starting offloading backends");
+        return this.createBackends(config.backends, bridgeFun, hwFun, report.id);
     }
 
     private saveClusterDot(cluster: Cluster, etg: TaskGraph, name: string): void {
@@ -219,12 +232,7 @@ export class HoopaAPI extends AHoopaStage {
         return alg.run(etg);
     }
 
-    private offload(cluster: Cluster, backends: OffloadingBackend[], alg: string, outputBaseline: boolean = false): void {
-        if (backends.length === 0 && !outputBaseline) {
-            this.log("No backends to offload to, skipping offloading");
-            return;
-        }
-
+    public splitHardwareSoftware(cluster: Cluster, alg: string): [FunctionJp, FunctionJp] | [null, null] {
         const outliner = new ClusterOutliner(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
         const outlineRes = outliner.outlineCluster(cluster);
         if (outlineRes === null) {
@@ -232,24 +240,25 @@ export class HoopaAPI extends AHoopaStage {
             const outDir = `${alg}_failed_outlining`;
             this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
             this.log(`Generated invalid code at ${SourceCodeOutput.SRC_PARENT} ${outDir}`);
-            return;
+            return [null, null];
         }
         const [_, bridgeFun, clusterFun] = outlineRes;
+        return [bridgeFun, clusterFun];
+    }
 
-        if (backends.length === 0 && outputBaseline) {
-            this.log(`No backends to offload to, outputting code as- is`);
-
-            const outDir = `${alg}_baseline`;
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${outDir}`);
-
-            this.log(`Generated baseline partitioned code(i.e., SW and HW both targeting the CPU) at ${SourceCodeOutput.SRC_PARENT}/${outDir}`);
-            return;
-        }
-
+    public createBackends(backends: OffloadingBackend[], bridgeFun: FunctionJp, clusterFun: FunctionJp, folderName: string): boolean {
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+
+        let success = true;
         for (const backend of backends) {
-            const outDir = `${alg}_${backend.toLowerCase()}`;
-            offloader.apply(clusterFun, bridgeFun, backend, outDir, false);
+            const fullFolderName = `${folderName}_${backend.toLowerCase()}`;
+
+            const ok = offloader.apply(clusterFun, bridgeFun, backend, fullFolderName, false);
+            if (!ok) {
+                this.logError(`Offloading with backend ${backend} failed`);
+                success = false;
+            }
         }
+        return success;
     }
 }

@@ -8,7 +8,7 @@ export class XrtCxxBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, debug: boolean): Scope {
+    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
         const wl = ClavaJoinPoints.stmtLiteral("");
 
         if (debug) {
@@ -42,7 +42,9 @@ export class XrtCxxBackend extends ABackend {
         ];
 
         const body = ClavaJoinPoints.scope(...stmts);
-        return body;
+        bridgeFun.body.replaceWith(body);
+
+        return [clusterFun, bridgeFun];
     }
 
     private wl(): Statement {
