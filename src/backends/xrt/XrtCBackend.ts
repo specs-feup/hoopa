@@ -7,6 +7,8 @@ import { MallocHoister } from "@specs-feup/clava-code-transforms/MallocHoister";
 import { StructFlattener } from "@specs-feup/clava-code-transforms/StructFlattener";
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
 import { HlsDeadCodeEliminator } from "./HlsDeadCodeEliminator.js";
+import { InterfaceBuilder } from "./InterfaceBuilder.js";
+import { join } from "path";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -18,10 +20,11 @@ export class XrtCBackend extends ABackend {
         const getBridgeFun = () => this.regenFunction(bridgeFun.name);
 
         const steps = [
-            { name: "DCE", apply: () => this.applyDeadCodeElimination(getClusterFun(), folderName) },
-            { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) },
-            { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) },
-            { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) },
+            { name: "interface building", apply: () => this.applyInterfaceBuilding(getClusterFun(), getBridgeFun(), folderName) },
+            // { name: "DCE", apply: () => this.applyDeadCodeElimination(getClusterFun(), folderName) },
+            // { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) },
+            // { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) },
+            // { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) },
         ];
 
         for (const step of steps) {
@@ -46,6 +49,15 @@ export class XrtCBackend extends ABackend {
             this.logError(`Error during ${name}: ${e}`);
             return false;
         }
+    }
+
+    private applyInterfaceBuilding(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): boolean {
+        return this.applyPass("interface building", (fun) => {
+            const interfaceBuilder = new InterfaceBuilder();
+            const inoutsPath = join(this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, "interface-instr");
+            const interfaceDesc = interfaceBuilder.readInterface(inoutsPath);
+            interfaceBuilder.buildInterface(interfaceDesc, clusterFun, bridgeFun);
+        }, clusterFun, folderName, "t0-interface-building");
     }
 
     private applyDeadCodeElimination(clusterFun: FunctionJp, folderName: string): boolean {

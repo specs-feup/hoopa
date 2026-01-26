@@ -36,11 +36,12 @@
   },
   "dependencies": {
     "@specs-feup/clava": "^3.0.8",
-    "@specs-feup/lara": "^3.0.5",
     "@specs-feup/clava-code-transforms": "^1.0.0",
     "@specs-feup/clava-vitis-integration": "^1.0.0",
     "@specs-feup/extended-task-graph": "^1.0.0",
+    "@specs-feup/lara": "^3.0.5",
     "chalk": "^5.3.0",
+    "csv-parser": "^3.2.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
