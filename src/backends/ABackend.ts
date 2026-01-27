@@ -15,7 +15,7 @@ export abstract class ABackend extends AHoopaStage {
         this.backendName = backendName.toLowerCase();
     }
 
-    public apply(clusterFun: FunctionJp, bridgeFun: FunctionJp, algName: string = "clustered", debug: boolean = false): boolean {
+    public apply(clusterFun: FunctionJp, bridgeFun: FunctionJp, algName: string = "clustered", debug: boolean = false, options: BackendOptions = {}): boolean {
         this.log(`Applying backend ${this.backendName} to bridge function ${bridgeFun.name}${debug ? " with debug info" : ""}`);
 
         if (debug) {
@@ -26,10 +26,14 @@ export abstract class ABackend extends AHoopaStage {
         this.generateCode(`${basePath}/baseline`);
         this.log(`Code generated at ${basePath}/baseline`);
 
-        this.generateFramaCReport(clusterFun, basePath, "baseline");
-        this.generateClusterETG(clusterFun, algName);
+        if (!options?.skipETG) {
+            this.generateClusterETG(clusterFun, algName);
+        }
+        if (!options?.skipFramaC) {
+            this.generateFramaCReport(clusterFun, basePath, "baseline");
+        }
 
-        [clusterFun, bridgeFun] = this.applyTransforms(clusterFun, bridgeFun, algName);
+        [clusterFun, bridgeFun] = this.applyTransforms(clusterFun, bridgeFun, algName, options?.recipe);
         [clusterFun, bridgeFun] = this.buildBody(clusterFun, bridgeFun, algName, debug);
 
         if (debug) {
@@ -41,13 +45,15 @@ export abstract class ABackend extends AHoopaStage {
             this.log(`Code generated at ${basePath}/final`);
             this.logWarning("Writing final code is disabled for now.");
         }
-        this.generateFramaCReport(clusterFun, basePath, "final");
+        if (!options?.skipETG) {
+            this.generateFramaCReport(clusterFun, basePath, "final");
+        }
         Clava.popAst();
 
         return true;
     }
 
-    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): [FunctionJp, FunctionJp] {
+    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, startingTransform?: string[]): [FunctionJp, FunctionJp] {
         this.log(`No transforms applied for backend ${this.backendName}`);
         return [clusterFun, bridgeFun];
     }
@@ -81,4 +87,10 @@ export abstract class ABackend extends AHoopaStage {
         etgFlow.analyzeTaskGraph(etg!, subDir);
         etgFlow.dumpTaskGraph(etg!, subDir);
     }
+}
+
+export type BackendOptions = {
+    skipETG?: boolean;
+    skipFramaC?: boolean;
+    recipe?: string[];
 }

@@ -1,7 +1,36 @@
 import { AdvancedTransform } from "@specs-feup/clava-code-transforms/AdvancedTransform";
-import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { Call, FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import cluster from "cluster";
 import { readFileSync } from "fs";
 import { join } from "path";
+
+export enum ArgType {
+    STRUCT_POINTER = "STRUCT_POINTER",
+    WRAPPED_STRUCT_POINTER = "WRAPPED_STRUCT_POINTER",
+    PRIMITIVE = "PRIMITIVE",
+    PRIMITIVE_POINTER = "PRIMITIVE_POINTER",
+}
+
+export enum LivenessType {
+    LIVEIN = "LIVEIN",
+    LIVEOUT = "LIVEOUT",
+    LIVEOUT_USEDLATER = "LIVEOUT-USEDLATER",
+}
+
+export type InterfaceArg = {
+    name: string;
+    type: string;
+    argType: ArgType;
+    sizeInBytes: number;
+    liveness: LivenessType;
+};
+
+export type InterfaceDescription = {
+    inData: Array<InterfaceArg>;
+    outData: Array<InterfaceArg>;
+};
 
 export class InterfaceBuilder extends AdvancedTransform {
     constructor(silent: boolean = false) {
@@ -36,32 +65,43 @@ export class InterfaceBuilder extends AdvancedTransform {
     }
 
     public buildInterface(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
+        this.log(`Building interface in bridge function ${bridgeFun.name}`);
+        this.removeUnnecessaryArgs(interfaceDesc, clusterFun, bridgeFun);
+        this.log(`Interface built.`);
+    }
+
+    private removeUnnecessaryArgs(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
+        const toRemove: Number[] = [];
+        const clusterCall = Query.searchFrom(bridgeFun, Call, { name: clusterFun.name }).get()[0];
+
+        for (let i = 0; i < clusterCall.args.length; i++) {
+            const isIn = interfaceDesc.inData.find(arg => arg.name === clusterCall.args[i].code);
+            const isOut = interfaceDesc.outData.find(arg => arg.name === clusterCall.args[i].code);
+
+            if (!isIn && !isOut) {
+                toRemove.push(i);
+            }
+        }
+        this.log(`  Found ${toRemove.length} unnecessary arguments to remove.`);
+
+        // Remove params in cluster fun
+        const newClusterParams = [];
+        for (let i = 0; i < clusterFun.params.length; i++) {
+            if (!toRemove.includes(i)) {
+                newClusterParams.push(clusterFun.params[i]);
+            }
+        }
+        clusterFun.setParams(newClusterParams);
+
+        // Remove args in cluster call
+        const newClusterArgs = [];
+        for (let i = 0; i < clusterCall.args.length; i++) {
+            if (!toRemove.includes(i)) {
+                newClusterArgs.push(clusterCall.args[i]);
+            }
+        }
+        const newClusterCall = ClavaJoinPoints.call(clusterFun, ...newClusterArgs);
+        clusterCall.replaceWith(newClusterCall);
 
     }
 }
-
-export enum ArgType {
-    STRUCT_POINTER = "STRUCT_POINTER",
-    WRAPPED_STRUCT_POINTER = "WRAPPED_STRUCT_POINTER",
-    PRIMITIVE = "PRIMITIVE",
-    PRIMITIVE_POINTER = "PRIMITIVE_POINTER",
-}
-
-export enum LivenessType {
-    LIVEIN = "LIVEIN",
-    LIVEOUT = "LIVEOUT",
-    LIVEOUT_USEDLATER = "LIVEOUT-USEDLATER",
-}
-
-export type InterfaceArg = {
-    name: string;
-    type: string;
-    argType: ArgType;
-    sizeInBytes: number;
-    liveness: LivenessType;
-};
-
-export type InterfaceDescription = {
-    inData: Array<InterfaceArg>;
-    outData: Array<InterfaceArg>;
-};

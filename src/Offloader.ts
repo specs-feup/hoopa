@@ -7,6 +7,7 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { XrtCBackend } from "./backends/xrt/XrtCBackend.js";
 import { CudaBackend } from "./backends/cuda/CudaBackend.js";
 import { OmpSsBackend } from "./backends/ompss/OmpsSsBackend.js";
+import { BackendOptions } from "./backends/ABackend.js";
 
 export class Offloader extends AHoopaStage {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -14,7 +15,7 @@ export class Offloader extends AHoopaStage {
         this.setLabelColor(chalk.magentaBright);
     }
 
-    public apply(clusterFun: FunctionJp, bridgeFun: FunctionJp, backend: OffloadingBackend, folderName: string, debug: boolean = false): boolean {
+    public apply(clusterFun: FunctionJp, bridgeFun: FunctionJp, backend: OffloadingBackend, folderName: string, debug: boolean = false, options: BackendOptions = {}): boolean {
         Clava.pushAst();
 
         let success = true;
@@ -27,13 +28,13 @@ export class Offloader extends AHoopaStage {
             case OffloadingBackend.CUDA:
                 {
                     const offloader = new CudaBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    success = offloader.apply(clusterFun, bridgeFun, folderName, false);
+                    success = offloader.apply(clusterFun, bridgeFun, folderName, false, options);
                     break;
                 }
             case OffloadingBackend.OMPSS_FPGA:
                 {
                     const offloader = new OmpSsBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    success = offloader.apply(clusterFun, bridgeFun, folderName, false);
+                    success = offloader.apply(clusterFun, bridgeFun, folderName, false, options);
                     break;
                 }
             case OffloadingBackend.XRT:
@@ -41,7 +42,7 @@ export class Offloader extends AHoopaStage {
                     const offloader = Clava.isCxx() ?
                         new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
                         new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-                    success = offloader.apply(clusterFun, bridgeFun, folderName, false);
+                    success = offloader.apply(clusterFun, bridgeFun, folderName, false, options);
                     break;
                 }
             default:

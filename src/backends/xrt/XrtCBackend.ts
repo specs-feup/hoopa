@@ -15,19 +15,27 @@ export class XrtCBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): [FunctionJp, FunctionJp] {
+    protected applyTransforms(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, recipe?: string[]): [FunctionJp, FunctionJp] {
         const getClusterFun = () => this.regenFunction(clusterFun.name);
         const getBridgeFun = () => this.regenFunction(bridgeFun.name);
 
-        const steps = [
-            { name: "interface building", apply: () => this.applyInterfaceBuilding(getClusterFun(), getBridgeFun(), folderName) },
-            // { name: "DCE", apply: () => this.applyDeadCodeElimination(getClusterFun(), folderName) },
-            // { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) },
-            // { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) },
-            // { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) },
-        ];
+        const steps: Map<string, any> = new Map();
+        steps.set("t0-interface-building", { name: "interface building", apply: () => this.applyInterfaceBuilding(getClusterFun(), getBridgeFun(), folderName) });
+        steps.set("t1-dead-code-elimination", { name: "DCE", apply: () => this.applyDeadCodeElimination(getClusterFun(), folderName) });
+        steps.set("t2-inline", { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) });
+        steps.set("t3-flattening", { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) });
+        steps.set("t4-hoisting", { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) });
 
-        for (const step of steps) {
+        recipe = recipe ?? [
+            "t0-interface-building",
+            "t1-dead-code-elimination",
+            "t2-inline",
+            "t3-flattening",
+            "t4-hoisting"
+        ]
+
+        for (const transform of recipe) {
+            const step = steps.get(transform);
             if (!step.apply()) {
                 this.log(`Skipping remaining transforms due to ${step.name} failure`);
                 return [getClusterFun(), getBridgeFun()];

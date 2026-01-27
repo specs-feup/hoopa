@@ -19,7 +19,8 @@ import { DotConverter } from "@specs-feup/extended-task-graph/DotConverter";
 import { ProfilingDecorator } from "./decorators/ProfilingDecorator.js";
 import { ClusterOutliner } from "@specs-feup/extended-task-graph/ClusterOutliner";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, FileJp, FunctionJp, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { BackendOptions } from "./backends/ABackend.js";
 
 export class HoopaAPI extends AHoopaStage {
     private etgApi: ExtendedTaskGraphAPI;
@@ -260,5 +261,42 @@ export class HoopaAPI extends AHoopaStage {
             }
         }
         return success;
+    }
+
+    public resumeFromBackendCheckpoint(parentFolder: string, clusterFileName: string, bridgeFileName: string, backend: OffloadingBackend, recipe: string[]): boolean {
+        const clusterFile = Query.search(FileJp, { name: clusterFileName }).first() as FileJp;
+        const bridgeFile = Query.search(FileJp, { name: bridgeFileName }).first() as FileJp;
+        if (!clusterFile || !bridgeFile) {
+            this.logError(`Could not find cluster file ${clusterFileName} or bridge file ${bridgeFileName}`);
+            return false;
+        }
+
+        const bridgeFun = Query.searchFrom(bridgeFile, FunctionJp).first() as FunctionJp;
+        if (!bridgeFun) {
+            this.logError(`Could not find bridge function in file ${bridgeFileName}`);
+            return false;
+        }
+
+        const clusterCall = Query.searchFrom(bridgeFun, Call).first() as Call;
+        if (!clusterCall) {
+            this.logError(`Could not find cluster function call in bridge function ${bridgeFun.name}`);
+            return false;
+        }
+
+        const clusterFunName = clusterCall.name;
+        const clusterFun = Query.searchFrom(clusterFile, FunctionJp, { name: clusterFunName }).first() as FunctionJp;
+        if (!clusterFun) {
+            this.logError(`Could not find cluster function ${clusterFunName} in file ${clusterFileName}`);
+            return false;
+        }
+
+        const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+        const options: BackendOptions = { recipe: recipe, skipETG: true, skipFramaC: true };
+        const ok = offloader.apply(clusterFun, bridgeFun, backend, parentFolder, false, options);
+        if (!ok) {
+            this.logError(`Offloading with backend ${backend} failed`);
+            return false;
+        }
+        return true;
     }
 }
