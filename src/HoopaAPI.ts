@@ -289,9 +289,9 @@ export class HoopaAPI extends AHoopaStage {
             this.logError(`Could not find cluster function ${clusterFunName} in file ${clusterFileName}`);
             return false;
         }
+        const options: BackendOptions = { recipe: recipe, skipETG: true, skipFramaC: true };
 
         const offloader = new Offloader(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
-        const options: BackendOptions = { recipe: recipe, skipETG: true, skipFramaC: true };
         const ok = offloader.apply(clusterFun, bridgeFun, backend, parentFolder, false, options);
         if (!ok) {
             this.logError(`Offloading with backend ${backend} failed`);
