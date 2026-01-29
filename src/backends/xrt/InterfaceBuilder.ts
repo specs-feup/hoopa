@@ -69,7 +69,32 @@ export class InterfaceBuilder extends AdvancedTransform {
         //this.removeWrappers(interfaceDesc, clusterFun, bridgeFun);
         this.removeUnnecessaryArgs(interfaceDesc, clusterFun, bridgeFun);
         this.initLiveOutUsedLaterArgs(interfaceDesc, clusterFun, bridgeFun);
+        this.annotateClusterFunction(clusterFun, interfaceDesc);
         this.log(`Interface built.`);
+    }
+
+    private annotateClusterFunction(clusterFun: FunctionJp, interfaceDesc: InterfaceDescription): void {
+        this.log(`  Annotating cluster function ${clusterFun.name} with interface metadata.`);
+        const pragmaInfo = new Map<String, any>();
+
+        for (const inData of interfaceDesc.inData) {
+            pragmaInfo.set(inData.name, { argType: inData.argType, in: inData.liveness, out: null, size: inData.sizeInBytes });
+        }
+        for (const outData of interfaceDesc.outData) {
+            if (pragmaInfo.has(outData.name)) {
+                const existing = pragmaInfo.get(outData.name);
+                existing.out = outData.argType;
+                pragmaInfo.set(outData.name, existing);
+            } else {
+                pragmaInfo.set(outData.name, { argType: outData.argType, in: null, out: outData.liveness, size: outData.sizeInBytes });
+            }
+        }
+        for (const [argName, info] of pragmaInfo) {
+            const pragmaStr = `#pragma clava param=${argName} type=${info.argType} in=${info.in ?? 'NONE'} out=${info.out ?? 'NONE'} size=${info.size}`;
+            const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragmaStr);
+            clusterFun.body.insertBegin(pragmaStmt);
+            this.log(`    Added pragma for argument ${argName}: ${pragmaStr}`);
+        }
     }
 
     private initLiveOutUsedLaterArgs(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
