@@ -1,6 +1,6 @@
 import { AdvancedTransform } from "@specs-feup/clava-code-transforms/AdvancedTransform";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { Call, Expression, FunctionJp, ParenExpr, PointerType, UnaryOp, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, Expression, FunctionJp, ParenExpr, PointerType, UnaryOp, Varref, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import cluster from "cluster";
 import { readFileSync } from "fs";
@@ -11,6 +11,7 @@ export enum ArgType {
     WRAPPED_STRUCT_POINTER = "WRAPPED_STRUCT_POINTER",
     PRIMITIVE = "PRIMITIVE",
     PRIMITIVE_POINTER = "PRIMITIVE_POINTER",
+    PRIMITIVE_CONST = "PRIMITIVE_CONST",
 }
 
 export enum LivenessType {
@@ -67,10 +68,87 @@ export class InterfaceBuilder extends AdvancedTransform {
     public buildInterface(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
         this.log(`Building interface in bridge function ${bridgeFun.name}`);
         //this.removeWrappers(interfaceDesc, clusterFun, bridgeFun);
+        this.fixPragmaErrors(clusterFun);
         this.removeUnnecessaryArgs(interfaceDesc, clusterFun, bridgeFun);
         this.initLiveOutUsedLaterArgs(interfaceDesc, clusterFun, bridgeFun);
+        this.transformPointersToConst(interfaceDesc, clusterFun, bridgeFun);
         this.annotateClusterFunction(clusterFun, interfaceDesc);
         this.log(`Interface built.`);
+    }
+
+    private transformPointersToConst(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
+        this.log(`  Transforming PRIMITIVE_CONST pointer arguments to pass-by-value in cluster function ${clusterFun.name}.`);
+        for (const inData of interfaceDesc.inData) {
+            if (inData.argType !== ArgType.PRIMITIVE_CONST) {
+                continue;
+            }
+            const clusterCall = Query.searchFrom(bridgeFun, Call, { name: clusterFun.name }).get()[0];
+            const clusterCallArgIdx = [];
+            for (let i = 0; i < clusterCall.args.length; i++) {
+                const ref = Query.searchFromInclusive(clusterCall.args[i], Varref, { name: inData.name }).get()[0];
+                if (ref && clusterFun.params[i].type.isPointer) {
+                    clusterCallArgIdx.push(i);
+                }
+            }
+
+            for (const argIdx of clusterCallArgIdx) {
+                // Update call to cluster function to pass by value
+                const arg = clusterCall.args[argIdx];
+                const ref = Query.searchFromInclusive(arg, Varref).get()[0];
+                if (ref) {
+                    let parent = ref.parent;
+                    while (parent instanceof ParenExpr) {
+                        parent = parent.parent;
+                    }
+                    if (parent instanceof UnaryOp && parent.kind === 'addr_of') {
+                        console.log(`    Replacing ${parent.code} with ${ref.name} in cluster call.`);
+                        clusterCall.setArg(argIdx, ref);
+                    }
+                }
+                // Update cluster function parameter to be by value
+                const param = clusterFun.params[argIdx];
+                if (param.type instanceof PointerType) {
+                    const newType = param.type.pointee;
+                    param.setType(newType);
+                    this.log(`    Changed parameter ${param.name} type from pointer to ${newType.code}.`);
+
+                    for (const ref of Query.searchFrom(clusterFun, Varref, { name: param.name }).get()) {
+                        let parent = ref.parent;
+                        while (parent instanceof ParenExpr) {
+                            parent = parent.parent;
+                        }
+                        if (parent instanceof UnaryOp && parent.operator === '*') {
+                            parent.replaceWith(ref);
+                            // An additional cleanup, because it comes for free
+                            if (parent.parent instanceof ParenExpr) {
+                                parent.parent.replaceWith(ref);
+                            }
+                        }
+                    }
+                    this.log(`  Updated all references to parameter ${param.name} to dereference the pointer.`);
+                }
+            }
+        }
+        this.updateSignatures(clusterFun);
+    }
+
+    private fixPragmaErrors(clusterFun: FunctionJp): void {
+        for (const pragma of Query.searchFrom(clusterFun, WrapperStmt, (p) => p.code.startsWith('#pragma clava malloc_size')).get()) {
+            const pragmaStr = pragma.code;
+
+            const { max, min, avg } = Object.fromEntries(
+                [...pragmaStr.matchAll(/(max|min|avg)\s*=\s*(-?\d+(?:\.\d+)?)/gi)]
+                    .map(m => [m[1].toLowerCase(), Number(m[2])])
+            ) as { max?: number; min?: number; avg?: number };
+            if (max == undefined || min == undefined) {
+                continue;
+            }
+            if (max < min) {
+                const newPragma = ClavaJoinPoints.stmtLiteral(`#pragma clava malloc_size max=${min} min=${max} avg=${avg ?? min}`);
+                pragma.replaceWith(newPragma);
+                this.log(`  Fixed pragma malloc_size with max < min at ${pragma.filename}:${pragma.line}`);
+            }
+        }
     }
 
     private annotateClusterFunction(clusterFun: FunctionJp, interfaceDesc: InterfaceDescription): void {
@@ -126,70 +204,6 @@ export class InterfaceBuilder extends AdvancedTransform {
         }
     }
 
-    private removeWrappers(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
-        const clusterCall = Query.searchFrom(bridgeFun, Call, { name: clusterFun.name }).get()[0];
-        const bridgeCall = Query.search(Call, { name: bridgeFun.name }).get()[0];
-        const toUnwrapTentative: InterfaceArg[] = [
-            ...interfaceDesc.inData.filter(arg => arg.argType === ArgType.WRAPPED_STRUCT_POINTER),
-            ...interfaceDesc.outData.filter(arg => arg.argType === ArgType.WRAPPED_STRUCT_POINTER)
-        ];
-
-        const toUnwrap: InterfaceArg[] = toUnwrapTentative.filter(arg => {
-            const ok = interfaceDesc.outData.find(outArg => outArg.name === arg.name && outArg.liveness === LivenessType.LIVEOUT_USEDLATER) === undefined;
-            if (!ok) {
-                this.log(`  Not unwrapping argument ${arg.name} as it is LIVEOUT-USEDLATER`);
-            }
-            return ok;
-        });
-        this.log(`  Found ${toUnwrap.length} wrapped struct pointers to unwrap.`);
-
-        const indexes = new Set<number>();
-        toUnwrap.forEach(arg => {
-            for (let i = 0; i < clusterCall.args.length; i++) {
-                if (clusterCall.args[i].code === arg.name) {
-                    indexes.add(i);
-                }
-            }
-        });
-
-        for (const index of indexes) {
-            // Update bridge fun to accept struct directly
-            const bridgeParam = bridgeFun.params[index];
-            const type = bridgeParam.type;
-            console.log(bridgeParam.code, type.code, type.joinPointType);
-            const derefType = ClavaJoinPoints.typeLiteral(type.code.slice(0, -1));
-            bridgeFun.setParamType(index, derefType);
-
-            // Update bridge call to pass the struct directly
-            const callArg = bridgeCall.args[index];
-            let child = callArg.children[0];
-            while (child instanceof ParenExpr) {
-                child = child.children[0];
-            }
-            bridgeCall.setArg(index, child as Expression);
-
-            // Update cluster fun to accept struct directly
-            const clusterParam = clusterFun.params[index];
-            const clusterDerefType = ClavaJoinPoints.typeLiteral(clusterParam.type.code.slice(0, -1));
-            clusterFun.setParamType(index, clusterDerefType);
-
-            for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: clusterParam.name }).get()) {
-                let parent = ref.parent;
-                while (parent instanceof ParenExpr) {
-                    parent = parent.parent;
-                }
-                if (parent instanceof UnaryOp && parent.operator === '*') {
-                    parent.replaceWith(ref);
-                } else {
-                    const addrOf = ClavaJoinPoints.unaryOp('&', ref);
-                    ref.replaceWith(addrOf);
-                }
-            }
-        }
-        this.updateSignatures(clusterFun);
-        this.updateSignatures(bridgeFun);
-    }
-
     private updateSignatures(fun: FunctionJp): void {
         for (const sig of Query.search(FunctionJp, (f) => f.name === fun.name && !f.isImplementation).get()) {
             const newSig = ClavaJoinPoints.functionDecl(fun.name, fun.returnType, ...fun.params)
@@ -201,9 +215,12 @@ export class InterfaceBuilder extends AdvancedTransform {
         const toRemove: Number[] = [];
         const clusterCall = Query.searchFrom(bridgeFun, Call, { name: clusterFun.name }).get()[0];
 
+        const argHasSymbol = (arg: Expression, symbol: string): boolean => {
+            return arg.getDescendantsAndSelf("varref").some(v => (v as Varref).name === symbol);
+        }
         for (let i = 0; i < clusterCall.args.length; i++) {
-            const isIn = interfaceDesc.inData.find(arg => arg.name === clusterCall.args[i].code);
-            const isOut = interfaceDesc.outData.find(arg => arg.name === clusterCall.args[i].code);
+            const isIn = interfaceDesc.inData.find(arg => argHasSymbol(clusterCall.args[i], arg.name));
+            const isOut = interfaceDesc.outData.find(arg => argHasSymbol(clusterCall.args[i], arg.name));
 
             if (!isIn && !isOut) {
                 toRemove.push(i);

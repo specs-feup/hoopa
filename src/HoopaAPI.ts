@@ -277,14 +277,14 @@ export class HoopaAPI extends AHoopaStage {
             return false;
         }
 
-        const clusterCall = Query.searchFrom(bridgeFun, Call).first() as Call;
+        const clusterFunName = bridgeFun.name.replace("_bridge", "");
+        const clusterCall = Query.searchFrom(bridgeFun, Call, { name: clusterFunName }).first() as Call;
         if (!clusterCall) {
             this.logError(`Could not find cluster function call in bridge function ${bridgeFun.name}`);
             return false;
         }
 
-        const clusterFunName = clusterCall.name;
-        const clusterFun = Query.searchFrom(clusterFile, FunctionJp, { name: clusterFunName }).first() as FunctionJp;
+        const clusterFun = Query.searchFrom(clusterFile, FunctionJp, (f) => f.name == clusterFunName && f.isImplementation).first() as FunctionJp;
         if (!clusterFun) {
             this.logError(`Could not find cluster function ${clusterFunName} in file ${clusterFileName}`);
             return false;
