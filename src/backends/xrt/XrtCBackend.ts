@@ -25,13 +25,15 @@ export class XrtCBackend extends ABackend {
         steps.set("t2-inline", { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) });
         steps.set("t3-flattening", { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) });
         steps.set("t4-hoisting", { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) });
+        steps.set("t5-optimization", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), folderName) });
 
         recipe = recipe ?? [
             "t0-interface-building",
             "t1-dead-code-elimination",
             "t2-inline",
             "t3-flattening",
-            "t4-hoisting"
+            "t4-hoisting",
+            "t5-optimization"
         ]
 
         for (const transform of recipe) {
@@ -97,5 +99,9 @@ export class XrtCBackend extends ABackend {
         }, clusterFun, folderName, "t4-hoisting");
     }
 
-
+    private applyOptimizations(clusterFun: FunctionJp, folderName: string): boolean {
+        return this.applyPass("optimizations", (fun) => {
+            // Placeholder for future optimizations
+        }, clusterFun, folderName, "t5-optimization");
+    }
 }
