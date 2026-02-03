@@ -9,6 +9,7 @@ import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStr
 import { HlsDeadCodeEliminator } from "./HlsDeadCodeEliminator.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
 import { join } from "path";
+import { MemoryOptimizer } from "./MemoryOptimizer.js";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -25,7 +26,7 @@ export class XrtCBackend extends ABackend {
         steps.set("t2-inline", { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) });
         steps.set("t3-flattening", { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) });
         steps.set("t4-hoisting", { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) });
-        steps.set("t5-optimization", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), folderName) });
+        steps.set("t5-optimization", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName) });
 
         recipe = recipe ?? [
             "t0-interface-building",
@@ -99,9 +100,9 @@ export class XrtCBackend extends ABackend {
         }, clusterFun, folderName, "t4-hoisting");
     }
 
-    private applyOptimizations(clusterFun: FunctionJp, folderName: string): boolean {
+    private applyOptimizations(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): boolean {
         return this.applyPass("optimizations", (fun) => {
-            // Placeholder for future optimizations
+            new MemoryOptimizer().apply(clusterFun, bridgeFun);
         }, clusterFun, folderName, "t5-optimization");
     }
 }

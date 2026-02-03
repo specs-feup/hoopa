@@ -129,7 +129,7 @@ export class InterfaceBuilder extends AdvancedTransform {
                 }
             }
         }
-        this.updateSignatures(clusterFun);
+        InterfaceBuilder.updateSignatures(clusterFun);
     }
 
     private fixPragmaErrors(clusterFun: FunctionJp): void {
@@ -204,7 +204,7 @@ export class InterfaceBuilder extends AdvancedTransform {
         }
     }
 
-    private updateSignatures(fun: FunctionJp): void {
+    public static updateSignatures(fun: FunctionJp): void {
         for (const sig of Query.search(FunctionJp, (f) => f.name === fun.name && !f.isImplementation).get()) {
             const newSig = ClavaJoinPoints.functionDecl(fun.name, fun.returnType, ...fun.params)
             sig.replaceWith(newSig);
@@ -293,6 +293,6 @@ export class InterfaceBuilder extends AdvancedTransform {
         const newClusterCall = ClavaJoinPoints.call(clusterFun, ...newClusterArgs);
         clusterCall.replaceWith(newClusterCall);
 
-        this.updateSignatures(clusterFun);
+        InterfaceBuilder.updateSignatures(clusterFun);
     }
 }
