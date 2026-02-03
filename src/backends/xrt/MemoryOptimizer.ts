@@ -1,7 +1,7 @@
 import { AdvancedTransform } from "@specs-feup/clava-code-transforms/AdvancedTransform";
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { BinaryOp, Call, FunctionJp, ParenExpr, PointerType, UnaryOp, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, Call, FunctionJp, ParenExpr, PointerType, UnaryOp, Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
 
@@ -38,52 +38,9 @@ export class MemoryOptimizer extends AdvancedTransform {
 
             if (param.name.startsWith("memregion_") && param.type.isPointer) {
                 const size = parseInt(param.name.split("size")[1]);
-                const baseType = (param.type as PointerType).pointee;
-                const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
-
                 if (size < threshold) {
                     toRemove.push(i);
-                    this.log(`  Mapping parameter ${param.name} of size ${size} to local variable.`);
-                    // update cluster fun
-                    let newVar;
-                    let isArray = false;
-                    if (baseTypeSize == size) {
-                        newVar = ClavaJoinPoints.varDeclNoInit(param.name, baseType);
-                    }
-                    else {
-                        const arrayType = ClavaJoinPoints.constArrayType(baseType, Math.ceil(size / baseTypeSize));
-                        newVar = ClavaJoinPoints.varDeclNoInit(param.name, arrayType);
-                        isArray = true;
-                    }
-                    clusterFun.body.insertBegin(newVar);
 
-                    if (isArray) {
-                        continue;
-                    }
-
-                    for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
-                        let parent = ref.parent;
-                        while (parent instanceof ParenExpr) {
-                            parent = parent.parent;
-                        }
-                        if (parent instanceof UnaryOp && parent.operator === "*") {
-                            const newRef = newVar.varref();
-                            parent.replaceWith(newRef);
-                            if (parent.parent instanceof ParenExpr) {
-                                parent.parent.replaceWith(newRef);
-                            }
-                        }
-                    }
-                    for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
-                        let parent = ref.parent;
-                        if (parent instanceof BinaryOp && parent.operator === "=" && parent.right.code === ref.code) {
-                            const lhs = parent.left;
-                            if (lhs instanceof Varref && lhs.type.isPointer) {
-                                const addrOf = ClavaJoinPoints.unaryOp("&", ref);
-                                parent.setRight(addrOf);
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -104,6 +61,60 @@ export class MemoryOptimizer extends AdvancedTransform {
 
         InterfaceBuilder.updateSignatures(clusterFun);
         return toRemove.length;
+    }
+
+    private convertParamToLocal(clusterFun: FunctionJp, paramIndex: number, size: number, mapToBRAM: boolean = false): Vardecl {
+        const param = clusterFun.params[paramIndex];
+        const baseType = (param.type as PointerType).pointee;
+        const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
+
+        this.log(`  Mapping parameter ${param.name} of size ${size} to local variable.`);
+        // update cluster fun
+        let newVar;
+        let isArray = false;
+        if (baseTypeSize == size) {
+            newVar = ClavaJoinPoints.varDeclNoInit(param.name, baseType);
+        }
+        else {
+            const arrayType = ClavaJoinPoints.constArrayType(baseType, Math.ceil(size / baseTypeSize));
+            newVar = ClavaJoinPoints.varDeclNoInit(param.name, arrayType);
+            isArray = true;
+        }
+        if (mapToBRAM) {
+            const pragma = `#pragma HLS bind_storage variable=${param.name} type=RAM_2P impl=BRAM`;
+            const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragma);
+            clusterFun.body.insertBegin(pragmaStmt);
+        }
+        const declStmt = ClavaJoinPoints.declStmt(newVar);
+        clusterFun.body.insertBegin(declStmt);
+
+        if (isArray) {
+            return newVar;
+        }
+        for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
+            let parent = ref.parent;
+            while (parent instanceof ParenExpr) {
+                parent = parent.parent;
+            }
+            if (parent instanceof UnaryOp && parent.operator === "*") {
+                const newRef = newVar.varref();
+                parent.replaceWith(newRef);
+                if (parent.parent instanceof ParenExpr) {
+                    parent.parent.replaceWith(newRef);
+                }
+            }
+        }
+        for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
+            let parent = ref.parent;
+            if (parent instanceof BinaryOp && parent.operator === "=" && parent.right.code === ref.code) {
+                const lhs = parent.left;
+                if (lhs instanceof Varref && lhs.type.isPointer) {
+                    const addrOf = ClavaJoinPoints.unaryOp("&", ref);
+                    parent.setRight(addrOf);
+                }
+            }
+        }
+        return newVar;
     }
 
     private getAvailableBRAM(clusterFun: FunctionJp): [number, number, number] {
