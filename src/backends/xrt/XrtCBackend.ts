@@ -10,6 +10,8 @@ import { HlsDeadCodeEliminator } from "./HlsDeadCodeEliminator.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
 import { join } from "path";
 import { MemoryOptimizer } from "./MemoryOptimizer.js";
+import { writeFileSync } from "fs";
+import Io from "@specs-feup/lara/api/lara/Io.js";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -102,7 +104,14 @@ export class XrtCBackend extends ABackend {
 
     private applyOptimizations(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): boolean {
         return this.applyPass("optimizations", (fun) => {
-            new MemoryOptimizer().apply(clusterFun, bridgeFun);
+            const res = new MemoryOptimizer().apply(clusterFun, bridgeFun);
+            console.log(res);
+
+            const json = JSON.stringify(res, null, 4);
+            const filename = `${this.getAppName()}_memory-optimization-report.json`;
+            const path = join(".", this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, filename);
+            Io.writeFile(path, json);
+            this.log(`Memory optimization report saved to ${path}`);
         }, clusterFun, folderName, "t5-optimization");
     }
 }

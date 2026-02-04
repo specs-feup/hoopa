@@ -161,18 +161,21 @@ export class InterfaceBuilder extends AdvancedTransform {
         for (const outData of interfaceDesc.outData) {
             if (pragmaInfo.has(outData.name)) {
                 const existing = pragmaInfo.get(outData.name);
-                existing.out = outData.argType;
+                existing.out = outData.liveness.replace("-", "_");
                 pragmaInfo.set(outData.name, existing);
             } else {
-                pragmaInfo.set(outData.name, { argType: outData.argType, in: null, out: outData.liveness, size: outData.sizeInBytes });
+                pragmaInfo.set(outData.name, { argType: outData.argType, in: null, out: outData.liveness.replace("-", "_"), size: outData.sizeInBytes });
             }
         }
+        const pragmas = [];
         for (const [argName, info] of pragmaInfo) {
             const pragmaStr = `#pragma clava param=${argName} type=${info.argType} in=${info.in ?? 'NONE'} out=${info.out ?? 'NONE'} size=${info.size}`;
             const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragmaStr);
             clusterFun.body.insertBegin(pragmaStmt);
+            pragmas.push(pragmaStr);
             this.log(`    Added pragma for argument ${argName}: ${pragmaStr}`);
         }
+        pragmas.forEach(p => console.log(p));
     }
 
     private initLiveOutUsedLaterArgs(interfaceDesc: InterfaceDescription, clusterFun: FunctionJp, bridgeFun: FunctionJp): void {
