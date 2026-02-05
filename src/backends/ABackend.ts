@@ -34,7 +34,7 @@ export abstract class ABackend extends AHoopaStage {
         }
 
         [clusterFun, bridgeFun] = this.applyTransforms(clusterFun, bridgeFun, algName, options?.recipe);
-        [clusterFun, bridgeFun] = this.buildBody(clusterFun, bridgeFun, algName, debug);
+        [clusterFun, bridgeFun] = this.buildCommunication(clusterFun, bridgeFun, algName, debug);
 
         if (debug) {
             this.generateCode(`${basePath}/final-debug`);
@@ -43,7 +43,6 @@ export abstract class ABackend extends AHoopaStage {
         else {
             this.generateCode(`${basePath}/final`);
             this.log(`Code generated at ${basePath}/final`);
-            this.logWarning("Writing final code is disabled for now.");
         }
         if (!options?.skipETG) {
             this.generateFramaCReport(clusterFun, basePath, "final");
@@ -58,8 +57,8 @@ export abstract class ABackend extends AHoopaStage {
         return [clusterFun, bridgeFun];
     }
 
-    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
-        this.log(`No body generation implemented for backend ${this.backendName}`);
+    protected buildCommunication(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
+        this.log(`No communication generated for backend ${this.backendName}`);
         return [clusterFun, bridgeFun];
     }
 

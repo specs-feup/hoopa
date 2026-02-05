@@ -120,12 +120,12 @@ export class MemoryOptimizer extends AdvancedTransform {
         res.mappedByC = usedMemoryInC > 0 ? 1 : 0;
         res.sizeMappedByC = usedMemoryInC;
 
+        res.finalMemoryUsage = currentMemUsage;
+        res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
+
         this.logLine();
         this.log(`Final estimated BRAM usage: ${res.finalMemoryUsage} bytes (${res.finalMemoryPercent.toFixed(2)}%)`);
         this.log("Memory optimization completed.");
-
-        res.finalMemoryUsage = currentMemUsage;
-        res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
         return res;
     }
 
@@ -248,7 +248,8 @@ export class MemoryOptimizer extends AdvancedTransform {
                 const parentStmt = arrAccess.getAncestor("statement") as Statement;
 
                 const newTmpName = IdGenerator.next(`${param.name}_part`);
-                const newTmp = ClavaJoinPoints.varDeclNoInit(newTmpName, baseType);
+                const idxType = ClavaJoinPoints.type("size_t");
+                const newTmp = ClavaJoinPoints.varDeclNoInit(newTmpName, idxType);
                 const declStmt = ClavaJoinPoints.declStmt(newTmp);
                 newStatements.push(declStmt);
 
@@ -409,12 +410,18 @@ export class MemoryOptimizer extends AdvancedTransform {
             const newRef = newDecl.varref();
             ref.replaceWith(newRef);
 
-            let parent = newRef.parent;
-            while (parent instanceof ParenExpr) {
-                parent = parent.parent;
-            }
-            if (!newRef.type.isPointer && parent instanceof UnaryOp && parent.operator === "*") {
-                parent.replaceWith(newRef);
+            if (!newRef.type.isPointer) {
+                let parent = newRef.parent;
+                while (parent instanceof ParenExpr) {
+                    parent = parent.parent;
+                }
+                if (parent instanceof UnaryOp && parent.operator === "*") {
+                    parent.replaceWith(newRef);
+                }
+                if (parent instanceof BinaryOp && parent.operator === "=" && parent.left instanceof Varref && parent.left.type.isPointer) {
+                    const addrOf = ClavaJoinPoints.unaryOp("&", newRef);
+                    parent.setRight(addrOf);
+                }
             }
         }
 

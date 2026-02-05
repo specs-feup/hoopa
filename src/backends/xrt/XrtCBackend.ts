@@ -1,4 +1,4 @@
-import { FunctionJp, Scope } from "@specs-feup/clava/api/Joinpoints.js";
+import { FunctionJp, Scope, Statement, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import { ABackend } from "../ABackend.js";
 import { CallTreeInliner } from "@specs-feup/clava-code-transforms/CallTreeInliner";
 import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
@@ -10,8 +10,9 @@ import { HlsDeadCodeEliminator } from "./HlsDeadCodeEliminator.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
 import { join } from "path";
 import { MemoryOptimizer } from "./MemoryOptimizer.js";
-import { writeFileSync } from "fs";
 import Io from "@specs-feup/lara/api/lara/Io.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -49,11 +50,55 @@ export class XrtCBackend extends ABackend {
         return [getClusterFun(), getBridgeFun()];
     }
 
+    protected buildCommunication(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
+        const pragmas = Query.searchFrom(clusterFun, WrapperStmt, (w) => w.code.toLowerCase().startsWith("#pragma hls loop_tripcount")).get();
+        for (const pragma of pragmas) {
+            const max = Number.parseInt(/\bmax\s*=\s*(\d+)/.exec(pragma.code)?.[1] ?? "-1");
+            const min = Number.parseInt(/\bmin\s*=\s*(\d+)/.exec(pragma.code)?.[1] ?? "-1");
+            const avg = Number.parseInt(/\bavg\s*=\s*(\d+)/.exec(pragma.code)?.[1] ?? "-1");
+            if (max == -1) {
+                this.logWarning(`Loop with pragma '${pragma.code}' does not have a max trip count`);
+                continue;
+            }
+            if (min == -1 && avg == -1) {
+                continue;
+            }
+            let newPragma = pragma.code;
+            if (min != -1 && avg == -1) {
+                if (min > max) {
+                    newPragma = `#pragma HLS loop_tripcount max=${min} min=${max}`;
+                }
+                if (min == max) {
+                    newPragma = `#pragma HLS loop_tripcount max=${min}`;
+                }
+            }
+            else if (min >= max || avg >= max || avg >= min) {
+                const newMax = Math.max(max, min, avg);
+                const newMin = avg != -1 ? Math.min(max, min, avg) : Math.min(max, min);
+                if (newMax == newMin) {
+                    newPragma = `#pragma HLS loop_tripcount max=${newMax}`;
+                }
+                if (newMax != avg && newMin != avg) {
+                    newPragma = `#pragma HLS loop_tripcount max=${newMax} min=${newMin} avg=${avg}`;
+                }
+                else {
+                    newPragma = `#pragma HLS loop_tripcount max=${newMax} min=${newMin}`;
+                }
+            }
+            if (newPragma != pragma.code) {
+                this.log(`Updating '${pragma.code.split("count")[1].trim()}' -> '${newPragma.split("count")[1].trim()}'`);
+                pragma.replaceWith(ClavaJoinPoints.stmtLiteral(newPragma));
+            }
+        }
+
+        return [clusterFun, bridgeFun];
+    }
+
     private applyPass(name: string, transform: (f: FunctionJp) => void, fun: FunctionJp, folder: string, step: string): boolean {
         this.log(`Applying ${name}`);
         try {
             transform(fun);
-            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folder}/${step}`);
+            this.generateCode(`${SourceCodeOutput.SRC_PARENT}/${folder}/${step}`, false);
             this.log(`Code generated at ${SourceCodeOutput.SRC_PARENT}/${folder}/${step}`);
             Clava.rebuild();
             return true;
@@ -109,7 +154,7 @@ export class XrtCBackend extends ABackend {
 
             const json = JSON.stringify(res, null, 4);
             const filename = `${this.getAppName()}_memory-optimization-report.json`;
-            const path = join(".", this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, filename);
+            const path = join(".", this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, "t5-optimization", filename);
             Io.writeFile(path, json);
             this.log(`Memory optimization report saved to ${path}`);
         }, clusterFun, folderName, "t5-optimization");

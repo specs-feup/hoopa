@@ -8,7 +8,7 @@ export class XrtCxxBackend extends ABackend {
         super(topFunctionName, outputDir, appName, "XRT");
     }
 
-    protected buildBody(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
+    protected buildCommunication(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
         const wl = ClavaJoinPoints.stmtLiteral("");
 
         if (debug) {
