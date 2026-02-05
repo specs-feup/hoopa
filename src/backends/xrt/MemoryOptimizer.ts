@@ -136,13 +136,13 @@ export class MemoryOptimizer extends AdvancedTransform {
         for (let i = 0; i < clusterFun.params.length; i++) {
             const param = clusterFun.params[i];
             const [valid, size] = this.isValidLiveIn(clusterFun, param.name);
-            const hasAlreadyBeenMapped = Query.searchFrom(clusterFun.body, Vardecl, { name: `local_${param.name}` }).first() != null;
+            const hasAlreadyBeenMapped = Query.searchFrom(clusterFun.body, Vardecl, { name: `local_${param.name}` }).get()[0] != null;
             if (param.name.startsWith("memregion_") || param.name.startsWith("rtr_val") || !param.type.isPointer || !valid || hasAlreadyBeenMapped) {
                 continue;
             }
             //this.log(`Analyzing parameter ${param.name} for partial mapping:`);
             const [reads, writes, uniqueReads, uniqueWrites] = this.getParamReadCount(clusterFun, param.name);
-            this.log(`  Parameter ${param.name} has ${reads} reads and ${writes} writes (unique reads: ${uniqueReads}, unique writes: ${uniqueWrites})`);
+            this.log(`  Parameter ${param.name}: ${reads} (${uniqueReads}) reads, ${writes} (${uniqueWrites}) writes`);
             const readWrites = reads + writes;
 
             if (readWrites > mostAccesses) {
@@ -174,11 +174,72 @@ export class MemoryOptimizer extends AdvancedTransform {
         else {
             const remainingMemory = totalBytes - prevMemUsage;
             const actualFactor = Math.ceil(arraySize / remainingMemory);
-            usedMemory = arraySize / actualFactor;
+            usedMemory = Math.floor(arraySize / actualFactor);
             this.log(`  Partially mapping parameter ${chosenParam.name} to use ${usedMemory} bytes (factor ${actualFactor}).`);
-
+            this.partiallyMapArray(clusterFun, mostPromisingIndex, arraySize, actualFactor);
         }
         return usedMemory;
+    }
+
+    private partiallyMapArray(clusterFun: FunctionJp, paramIndex: number, size: number, factor: number): void {
+        const newStatements = [];
+
+        const param = clusterFun.params[paramIndex];
+        const type = param.type;
+        const baseType = (type as PointerType).pointee;
+        const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
+        const paramArrayTypedSize = Math.floor(size / baseTypeSize);
+
+        const localName = `local_${param.name}`;
+        const localArraySize = Math.floor(size / factor);
+        const localArrayTypedSize = Math.floor(localArraySize / baseTypeSize);
+
+        const localArrayType = ClavaJoinPoints.constArrayType(baseType, localArrayTypedSize);
+        const newDecl = ClavaJoinPoints.varDeclNoInit(localName, localArrayType)
+        const declStmt = ClavaJoinPoints.declStmt(newDecl);
+        newStatements.push(declStmt);
+
+        const pragma = `#pragma HLS bind_storage variable=${localName} type=RAM_2P impl=BRAM`;
+        const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragma);
+        newStatements.push(pragmaStmt);
+
+        /* Generate code using this template:
+        for (int paramIdx = 0, localIdx = 0; paramIdx < size && localIdx < limit; paramIdx += 3, localIdx++) {
+            local_foo[localIdx] = foo[paramIdx];
+        }
+        */
+        // first clause
+        const paramIdx = ClavaJoinPoints.varDecl(`paramIdx_${paramIndex}`, ClavaJoinPoints.integerLiteral(0));
+        const localIdx = ClavaJoinPoints.varDecl(`localIdx_${paramIndex}`, ClavaJoinPoints.integerLiteral(0));
+        const firstClause = ClavaJoinPoints.declStmt(paramIdx, localIdx);
+
+        // second clause
+        const paramIdxRef = paramIdx.varref();
+        const localIdxRef = localIdx.varref();
+        const cond = ClavaJoinPoints.binaryOp("&&",
+            ClavaJoinPoints.binaryOp("<", paramIdxRef, ClavaJoinPoints.integerLiteral(paramArrayTypedSize)),
+            ClavaJoinPoints.binaryOp("<", localIdxRef, ClavaJoinPoints.integerLiteral(localArrayTypedSize))
+        );
+        const secondClause = ClavaJoinPoints.exprStmt(cond);
+
+        // third clause
+        const thirdClause = ClavaJoinPoints.stmtLiteral(`paramIdx_${paramIndex} += ${factor}, localIdx_${paramIndex}++`);
+
+        // body
+        const arrayAccessParam = ClavaJoinPoints.exprLiteral(`${param.name}[paramIdx_${paramIndex}]`);
+        const arrayAccessLocal = ClavaJoinPoints.exprLiteral(`${localName}[localIdx_${paramIndex}]`);
+        const assignOp = ClavaJoinPoints.binaryOp("=", arrayAccessLocal, arrayAccessParam);
+        const stmt = ClavaJoinPoints.exprStmt(assignOp);
+        const body = ClavaJoinPoints.scope(stmt);
+
+        // loop
+        const loop = ClavaJoinPoints.forStmt(firstClause, secondClause, thirdClause, body);
+        newStatements.push(loop);
+
+        newStatements.reverse();
+        for (const stmt of newStatements) {
+            clusterFun.body.insertBegin(stmt);
+        }
     }
 
     private getParamReadCount(clusterFun: FunctionJp, paramName: string): [number, number, number, number] {
@@ -279,9 +340,13 @@ export class MemoryOptimizer extends AdvancedTransform {
         const param = clusterFun.params[paramIndex];
         const localName = `local_${param.name}`;
         const type = param.type;
+        const baseType = (type as PointerType).pointee;
+        const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
+
         const newStatements = [];
 
-        const newDecl = ClavaJoinPoints.varDeclNoInit(localName, type);
+        const newType = ClavaJoinPoints.constArrayType(baseType, size / baseTypeSize);
+        const newDecl = ClavaJoinPoints.varDeclNoInit(localName, newType);
         const declStmt = ClavaJoinPoints.declStmt(newDecl);
         newStatements.push(declStmt);
 
@@ -290,9 +355,6 @@ export class MemoryOptimizer extends AdvancedTransform {
             const pragmaStmt = ClavaJoinPoints.stmtLiteral(pragma);
             newStatements.push(pragmaStmt);
         }
-
-        const baseType = (type as PointerType).pointee;
-        const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
 
         if (size == baseTypeSize) {
             const derefParam = ClavaJoinPoints.unaryOp("*", param.varref());
