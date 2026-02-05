@@ -360,7 +360,7 @@ export class MemoryOptimizer extends AdvancedTransform {
                 const mapToBRAM = size >= 32;
                 this.mapParamToLocal(clusterFun, paramIndex, size, mapToBRAM);
                 mappedCount++;
-                ongoingMemUsage += size;
+                ongoingMemUsage += mapToBRAM ? size : 0;
             }
             else {
                 this.log(`  Cannot map parameter index ${paramIndex} of size ${size} bytes to BRAM: would exceed total memory limit.`);
@@ -379,7 +379,7 @@ export class MemoryOptimizer extends AdvancedTransform {
 
         const newStatements = [];
 
-        const newType = ClavaJoinPoints.constArrayType(baseType, size / baseTypeSize);
+        const newType = size != baseTypeSize ? ClavaJoinPoints.constArrayType(baseType, size / baseTypeSize) : baseType;
         const newDecl = ClavaJoinPoints.varDeclNoInit(localName, newType);
         const declStmt = ClavaJoinPoints.declStmt(newDecl);
         newStatements.push(declStmt);
@@ -392,8 +392,8 @@ export class MemoryOptimizer extends AdvancedTransform {
 
         if (size == baseTypeSize) {
             const derefParam = ClavaJoinPoints.unaryOp("*", param.varref());
-            const derefLocal = ClavaJoinPoints.unaryOp("*", newDecl.varref());
-            const assignOp = ClavaJoinPoints.binaryOp("=", derefLocal, derefParam);
+            const refLocal = newDecl.varref();
+            const assignOp = ClavaJoinPoints.binaryOp("=", refLocal, derefParam);
             const assignStmt = ClavaJoinPoints.exprStmt(assignOp);
             newStatements.push(assignStmt);
         }
@@ -405,14 +405,22 @@ export class MemoryOptimizer extends AdvancedTransform {
             newStatements.push(memcpyStmt);
         }
 
-        newStatements.reverse();
-        for (const stmt of newStatements) {
-            clusterFun.body.insertBegin(stmt);
-        }
-
         for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
             const newRef = newDecl.varref();
             ref.replaceWith(newRef);
+
+            let parent = newRef.parent;
+            while (parent instanceof ParenExpr) {
+                parent = parent.parent;
+            }
+            if (!newRef.type.isPointer && parent instanceof UnaryOp && parent.operator === "*") {
+                parent.replaceWith(newRef);
+            }
+        }
+
+        newStatements.reverse();
+        for (const stmt of newStatements) {
+            clusterFun.body.insertBegin(stmt);
         }
         return newDecl;
     }
@@ -422,7 +430,7 @@ export class MemoryOptimizer extends AdvancedTransform {
             const pragmaCode = stmt.code.trim();
             if (pragmaCode.startsWith("#pragma clava param")) {
                 const name = pragmaCode.match(/param\s*=\s*(\w+)/)?.[1];
-                if (name == undefined || !paramName.startsWith(name)) {
+                if (name == undefined || paramName !== name) {
                     continue;
                 }
                 const isLiveIn = pragmaCode.includes("LIVEIN");
@@ -430,14 +438,7 @@ export class MemoryOptimizer extends AdvancedTransform {
                 const isValid = isLiveIn && !isLiveOut;
 
                 const sizeMatch = pragmaCode.match(/size\s*=\s*(\d+)/);
-                let size = sizeMatch ? parseInt(sizeMatch[1]) : 0;
-
-                // Extremely ugly hack, valid only for CortexSuite structs:
-                size -= 8;
-                // Directives give us the size of the original struct, but since we flattened it,
-                // we need to subtract the size of the scalar fields (usually 2 ints = 8 bytes).
-                // The struct flattener needs to update the interface directives to make this generic
-
+                const size = sizeMatch ? parseInt(sizeMatch[1]) : 0;
                 return [isValid, size];
             }
         }
@@ -495,13 +496,6 @@ export class MemoryOptimizer extends AdvancedTransform {
     }
 
     private regenFunction(funName: string): FunctionJp {
-        // try {
-        //     Clava.rebuild();
-        // }
-        // catch (e) {
-        //     this.logError(`Error during Clava rebuild: ${e}`);
-        //     throw e;
-        // }
         return Query.search(FunctionJp, (f) => f.name === funName && f.isImplementation).first()!;
     }
 
