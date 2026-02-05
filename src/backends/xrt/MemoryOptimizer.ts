@@ -1,10 +1,10 @@
 import { AdvancedTransform } from "@specs-feup/clava-code-transforms/AdvancedTransform";
 import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStructFlattener";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { ArrayAccess, BinaryOp, Call, FunctionJp, Loop, ParenExpr, PointerType, Statement, UnaryOp, Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import { ArrayAccess, BinaryOp, Call, Expression, FunctionJp, Loop, ParenExpr, PointerType, Statement, UnaryOp, Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
-import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import IdGenerator from "@specs-feup/lara/api/lara/util/IdGenerator.js";
 
 export type MemoryOptimizerOptions = {
     totalMemoryLimitPercent: number; // e.g., 0.9 for 90%
@@ -239,6 +239,40 @@ export class MemoryOptimizer extends AdvancedTransform {
         newStatements.reverse();
         for (const stmt of newStatements) {
             clusterFun.body.insertBegin(stmt);
+        }
+
+        for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
+            if (ref.parent instanceof ArrayAccess) {
+                const arrAccess = ref.parent as ArrayAccess;
+                const indexExpr = arrAccess.subscript[0];
+                const parentStmt = arrAccess.getAncestor("statement") as Statement;
+
+                const newTmpName = IdGenerator.next(`${param.name}_part`);
+                const newTmp = ClavaJoinPoints.varDeclNoInit(newTmpName, baseType);
+                const declStmt = ClavaJoinPoints.declStmt(newTmp);
+                newStatements.push(declStmt);
+
+                const op1 = ClavaJoinPoints.parenthesis(indexExpr.copy() as Expression);
+                const op2 = ClavaJoinPoints.integerLiteral(factor);
+                const mod = ClavaJoinPoints.binaryOp("%", op1, op2);
+                const cond = ClavaJoinPoints.binaryOp("==", mod, ClavaJoinPoints.integerLiteral(0));
+
+                const ifBodyAccess = ClavaJoinPoints.exprLiteral(`${localName}[(${indexExpr.code}) / ${factor}]`);
+                const ifBodyAssign = ClavaJoinPoints.binaryOp("=", newTmp.varref(), ifBodyAccess);
+                const ifBodyStmt = ClavaJoinPoints.exprStmt(ifBodyAssign);
+
+                const elseBodyAccess = arrAccess.copy() as Expression;
+                const elseBodyAssign = ClavaJoinPoints.binaryOp("=", newTmp.varref(), elseBodyAccess);
+                const elseBodyStmt = ClavaJoinPoints.exprStmt(elseBodyAssign);
+
+                const ifStmt = ClavaJoinPoints.ifStmt(cond, ifBodyStmt, elseBodyStmt);
+
+                parentStmt.insertBefore(declStmt);
+                parentStmt.insertBefore(ifStmt);
+
+                const newRef = newTmp.varref();
+                indexExpr.replaceWith(newRef);
+            }
         }
     }
 
