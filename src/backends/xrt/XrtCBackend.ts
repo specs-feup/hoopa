@@ -1,4 +1,4 @@
-import { FunctionJp, Scope, Statement, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
+import { FileJp, FunctionJp, Scope, Statement, WrapperStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import { ABackend } from "../ABackend.js";
 import { CallTreeInliner } from "@specs-feup/clava-code-transforms/CallTreeInliner";
 import { SourceCodeOutput } from "@specs-feup/extended-task-graph/OutputDirectories";
@@ -13,6 +13,8 @@ import { MemoryOptimizer } from "./MemoryOptimizer.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { VitisHls } from "@specs-feup/clava-vitis-integration/VitisHls";
+import { AmdPlatform, ClockUnit, FlowTarget, OutputFormat, UncertaintyUnit, VitisHlsConfig } from "@specs-feup/clava-vitis-integration/VitisHlsConfig";
 
 export class XrtCBackend extends ABackend {
     constructor(topFunctionName: string, outputDir: string, appName: string) {
@@ -51,6 +53,35 @@ export class XrtCBackend extends ABackend {
     }
 
     protected buildCommunication(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, debug: boolean): [FunctionJp, FunctionJp] {
+        this.fixLoopTripcountPragmas(clusterFun);
+        this.generateHlsConfigFile(clusterFun, folderName);
+        return [clusterFun, bridgeFun];
+    }
+
+    private generateHlsConfigFile(clusterFun: FunctionJp, folderName: string): void {
+        this.log(`Generating HLS config file`);
+
+        const cfg = new VitisHlsConfig(clusterFun.name);
+        const allHeaders = Query.search(FileJp, (f) => f.isHeader && !f.isInSystemHeader).get();
+        cfg.addSources(allHeaders);
+        cfg.addSource(clusterFun.getAncestor("file") as FileJp);
+        cfg.setClock({ value: 150, unit: ClockUnit.MEGAHERTZ });
+        cfg.setUncertainty({ value: 2, unit: UncertaintyUnit.NANOSECOND });
+        cfg.setOutputFormat(OutputFormat.VITIS_XO);
+        cfg.setFlowTarget(FlowTarget.VITIS);
+        cfg.setPlatform(AmdPlatform.ZCU102);
+
+        const contents = cfg.generateConfigFile();
+        const name = "hls_config.cfg";
+        const path = join(this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, "final");
+        Io.writeFile(join(path, name), contents);
+
+        this.log(`HLS config file generated at ${path}/${name}`);
+    }
+
+    private fixLoopTripcountPragmas(clusterFun: FunctionJp): void {
+        this.log(`Fixing loop tripcount pragmas`);
+
         const pragmas = Query.searchFrom(clusterFun, WrapperStmt, (w) => w.code.toLowerCase().startsWith("#pragma hls loop_tripcount")).get();
         for (const pragma of pragmas) {
             const max = Number.parseInt(/\bmax\s*=\s*(\d+)/.exec(pragma.code)?.[1] ?? "-1");
@@ -86,12 +117,11 @@ export class XrtCBackend extends ABackend {
                 }
             }
             if (newPragma != pragma.code) {
-                this.log(`Updating '${pragma.code.split("count")[1].trim()}' -> '${newPragma.split("count")[1].trim()}'`);
+                this.log(`  Updating '${pragma.code.split("count")[1].trim()}' -> '${newPragma.split("count")[1].trim()}'`);
                 pragma.replaceWith(ClavaJoinPoints.stmtLiteral(newPragma));
             }
         }
-
-        return [clusterFun, bridgeFun];
+        this.log(`Fixed ${pragmas.length} loop tripcount pragmas`);
     }
 
     private applyPass(name: string, transform: (f: FunctionJp) => void, fun: FunctionJp, folder: string, step: string): boolean {

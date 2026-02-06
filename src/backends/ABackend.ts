@@ -41,7 +41,7 @@ export abstract class ABackend extends AHoopaStage {
             this.log(`Debug code generated at ${basePath}/final-debug`);
         }
         else {
-            this.generateCode(`${basePath}/final`);
+            this.generateCode(`${basePath}/final`, false);
             this.log(`Code generated at ${basePath}/final`);
         }
         if (!options?.skipETG) {
