@@ -9,7 +9,7 @@ import { LightStructFlattener } from "@specs-feup/clava-code-transforms/LightStr
 import { HlsDeadCodeEliminator } from "./HlsDeadCodeEliminator.js";
 import { InterfaceBuilder } from "./InterfaceBuilder.js";
 import { join } from "path";
-import { MemoryOptimizer } from "./MemoryOptimizer.js";
+import { defaultOptions, MemoryOptimizer, MemoryOptimizerOptions } from "./MemoryOptimizer.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
@@ -31,7 +31,24 @@ export class XrtCBackend extends ABackend {
         steps.set("t2-inline", { name: "inlining", apply: () => this.applyInlining(getClusterFun(), folderName) });
         steps.set("t3-flattening", { name: "struct flattening", apply: () => this.applyStructFlattening(getClusterFun(), folderName) });
         steps.set("t4-hoisting", { name: "malloc hoisting", apply: () => this.applyMallocHoisting(getClusterFun(), folderName) });
-        steps.set("t5-optimization", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName) });
+        steps.set("t5-optimization", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, defaultOptions) });
+
+        const makeOptions = (disableA: boolean, disableB: boolean, disableC: boolean): MemoryOptimizerOptions => ({
+            disableA,
+            disableB,
+            disableC,
+            totalMemoryLimitPercent: 0.9,
+            scalarToVarThreshold: 32,
+            partialMappingMaxFactor: 4
+        });
+        steps.set("t5-optimization-none", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(true, true, true)) });
+        steps.set("t5-optimization-A", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(false, true, true)) });
+        steps.set("t5-optimization-B", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(true, false, true)) });
+        steps.set("t5-optimization-C", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(true, true, false)) });
+        steps.set("t5-optimization-AB", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(false, false, true)) });
+        steps.set("t5-optimization-AC", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(false, true, false)) });
+        steps.set("t5-optimization-BC", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(true, false, false)) });
+        steps.set("t5-optimization-ABC", { name: "optimization", apply: () => this.applyOptimizations(getClusterFun(), getBridgeFun(), folderName, makeOptions(false, false, false)) });
 
         recipe = recipe ?? [
             "t0-interface-building",
@@ -177,16 +194,25 @@ export class XrtCBackend extends ABackend {
         }, clusterFun, folderName, "t4-hoisting");
     }
 
-    private applyOptimizations(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string): boolean {
-        return this.applyPass("optimizations", (fun) => {
-            const res = new MemoryOptimizer().apply(clusterFun, bridgeFun);
+    private applyOptimizations(clusterFun: FunctionJp, bridgeFun: FunctionJp, folderName: string, options: MemoryOptimizerOptions): boolean {
+        const str = `${options.disableA ? "" : "A"}${options.disableB ? "" : "B"}${options.disableC ? "" : "C"}`;
+        const label = str == "" ? "-none" : `-${str}`;
+        const subfolderName = `t5-optimization${label}`;
+
+        const callMemoryOptimizer = (clusterFun: FunctionJp, bridgeFun: FunctionJp, options: MemoryOptimizerOptions) => {
+            this.fixLoopTripcountPragmas(clusterFun);
+            const res = new MemoryOptimizer().apply(clusterFun, bridgeFun, options);
             console.log(res);
 
             const json = JSON.stringify(res, null, 4);
-            const filename = `${this.getAppName()}_memory-optimization-report.json`;
-            const path = join(".", this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, "t5-optimization", filename);
+            const filename = `${this.getAppName()}_memory-optimization${label}-report.json`;
+            const path = join(".", this.getOutputDir(), SourceCodeOutput.SRC_PARENT, folderName, subfolderName, filename);
             Io.writeFile(path, json);
             this.log(`Memory optimization report saved to ${path}`);
-        }, clusterFun, folderName, "t5-optimization");
+        };
+
+        return this.applyPass("optimizations", (_) => {
+            callMemoryOptimizer(clusterFun, bridgeFun, options);
+        }, clusterFun, folderName, subfolderName);
     }
 }

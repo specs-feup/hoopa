@@ -39,9 +39,11 @@ export class Offloader extends AHoopaStage {
                 }
             case OffloadingBackend.XRT:
                 {
-                    const offloader = Clava.isCxx() ?
-                        new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
-                        new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    // Disabled for now, assume it's always C
+                    // const offloader = Clava.isCxx() ?
+                    //     new XrtCxxBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName()) :
+                    //     new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
+                    const offloader = new XrtCBackend(this.getTopFunctionName(), this.getOutputDir(), this.getAppName());
                     success = offloader.apply(clusterFun, bridgeFun, folderName, false, options);
                     break;
                 }

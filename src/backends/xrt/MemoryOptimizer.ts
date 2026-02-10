@@ -7,22 +7,31 @@ import { InterfaceBuilder } from "./InterfaceBuilder.js";
 import IdGenerator from "@specs-feup/lara/api/lara/util/IdGenerator.js";
 
 export type MemoryOptimizerOptions = {
+    disableA?: boolean; // disable Heuristic A
+    disableB?: boolean; // disable Heuristic B
+    disableC?: boolean; // disable Heuristic C
     totalMemoryLimitPercent: number; // e.g., 0.9 for 90%
     scalarToVarThreshold: number; // in bytes
     partialMappingMaxFactor: number; // optional, default 4
 };
 
 export const defaultOptions: MemoryOptimizerOptions = {
+    disableA: false,
+    disableB: false,
+    disableC: false,
     totalMemoryLimitPercent: 0.9,
     scalarToVarThreshold: 32,
     partialMappingMaxFactor: 4
 };
 
 export type HeuristicResult = {
+    appliedA: boolean;
     mappedByA: number;
     sizeMappedByA: number;
+    appliedB: boolean;
     mappedByB: number;
     sizeMappedByB: number;
+    appliedC: boolean;
     mappedByC: number;
     sizeMappedByC: number;
     initialMemoryUsage: number;
@@ -38,10 +47,13 @@ export class MemoryOptimizer extends AdvancedTransform {
 
     public apply(clusterFun: FunctionJp, bridgeFun: FunctionJp, options: MemoryOptimizerOptions = defaultOptions): HeuristicResult {
         const res: HeuristicResult = {
+            appliedA: !(options.disableA == true),
             mappedByA: 0,
             sizeMappedByA: 0,
+            appliedB: !(options.disableB == true),
             mappedByB: 0,
             sizeMappedByB: 0,
+            appliedC: !(options.disableC == true),
             mappedByC: 0,
             sizeMappedByC: 0,
             initialMemoryUsage: 0,
@@ -65,60 +77,78 @@ export class MemoryOptimizer extends AdvancedTransform {
         res.availableFPGAMemory = availableBytes;
 
         // Heuristic A: map kernel-only arrays communicated as params to BRAM
-        this.logLine();
-        this.log("Applying Heuristic A: Mapping kernel-only arrays to BRAM");
-
-        const mappedScalars = this.applyHeuristicScalarsToVars(clusterFun, bridgeFun, options.scalarToVarThreshold);
-        this.log(`Mapped ${mappedScalars} scalar pointer parameters to variables where possible.`);
-        clusterFun = this.regenFunction(clusterFun.name);
-
-        const [mappedKernelOnlyArrays, usedMemoryInA] = this.applyHeuristicKernelArraysToBRAM(clusterFun, bridgeFun, currentMemUsage, totalBytes);
-        currentMemUsage += usedMemoryInA;
-
-        this.log(`Mapped ${mappedKernelOnlyArrays} kernel-only array parameters with ${usedMemoryInA} bytes to BRAM.`);
-        this.log(`Current estimated BRAM usage: ${currentMemUsage} (${(currentMemUsage * 100 / totalBytes).toFixed(2)}%)`);
-        clusterFun = this.regenFunction(clusterFun.name);
-
-        res.mappedByA = mappedScalars + mappedKernelOnlyArrays;
-        res.sizeMappedByA = usedMemoryInA;
-
-        if (currentMemUsage > totalBytes * options.totalMemoryLimitPercent) {
+        if (options.disableA == undefined || !options.disableA) {
             this.logLine();
-            this.log("Reached total memory usage limit after Heuristic A");
-            res.finalMemoryUsage = currentMemUsage;
-            res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
-            return res;
+            this.log("Applying Heuristic A: Mapping kernel-only arrays to BRAM");
+
+            const mappedScalars = this.applyHeuristicScalarsToVars(clusterFun, bridgeFun, options.scalarToVarThreshold);
+            this.log(`Mapped ${mappedScalars} scalar pointer parameters to variables where possible.`);
+            clusterFun = this.regenFunction(clusterFun.name);
+
+            const [mappedKernelOnlyArrays, usedMemoryInA] = this.applyHeuristicKernelArraysToBRAM(clusterFun, bridgeFun, currentMemUsage, totalBytes);
+            currentMemUsage += usedMemoryInA;
+
+            this.log(`Mapped ${mappedKernelOnlyArrays} kernel-only array parameters with ${usedMemoryInA} bytes to BRAM.`);
+            this.log(`Current estimated BRAM usage: ${currentMemUsage} (${(currentMemUsage * 100 / totalBytes).toFixed(2)}%)`);
+            clusterFun = this.regenFunction(clusterFun.name);
+
+            res.mappedByA = mappedScalars + mappedKernelOnlyArrays;
+            res.sizeMappedByA = usedMemoryInA;
+
+            if (currentMemUsage > totalBytes * options.totalMemoryLimitPercent) {
+                this.logLine();
+                this.log("Reached total memory usage limit after Heuristic A");
+                res.finalMemoryUsage = currentMemUsage;
+                res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
+                return res;
+            }
+        }
+        else {
+            this.logLine();
+            this.log("Heuristic A is disabled. Skipping.");
         }
 
         // Heuristic B: map live-in buffers to BRAM
-        this.logLine();
-        this.log("Applying Heuristic B: Mapping live-in buffers to BRAM");
-        const [mappedBuffers, usedMemoryInB] = this.applyHeuristicLiveInToBRAM(clusterFun, currentMemUsage, totalBytes);
-        currentMemUsage += usedMemoryInB;
-
-        this.log(`Mapped ${mappedBuffers} live-in buffer parameters with ${usedMemoryInB} bytes to BRAM.`);
-        this.log(`Current estimated BRAM usage: ${currentMemUsage} (${(currentMemUsage * 100 / totalBytes).toFixed(2)}%)`);
-        clusterFun = this.regenFunction(clusterFun.name);
-
-        res.mappedByB = mappedBuffers;
-        res.sizeMappedByB = usedMemoryInB;
-
-        if (currentMemUsage > totalBytes * options.totalMemoryLimitPercent) {
+        if (options.disableB == undefined || !options.disableB) {
             this.logLine();
-            this.log("Reached total memory usage limit after Heuristic B");
-            res.finalMemoryUsage = currentMemUsage;
-            res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
-            return res;
+            this.log("Applying Heuristic B: Mapping live-in buffers to BRAM");
+            const [mappedBuffers, usedMemoryInB] = this.applyHeuristicLiveInToBRAM(clusterFun, currentMemUsage, totalBytes);
+            currentMemUsage += usedMemoryInB;
+
+            this.log(`Mapped ${mappedBuffers} live-in buffer parameters with ${usedMemoryInB} bytes to BRAM.`);
+            this.log(`Current estimated BRAM usage: ${currentMemUsage} (${(currentMemUsage * 100 / totalBytes).toFixed(2)}%)`);
+            clusterFun = this.regenFunction(clusterFun.name);
+
+            res.mappedByB = mappedBuffers;
+            res.sizeMappedByB = usedMemoryInB;
+
+            if (currentMemUsage > totalBytes * options.totalMemoryLimitPercent) {
+                this.logLine();
+                this.log("Reached total memory usage limit after Heuristic B");
+                res.finalMemoryUsage = currentMemUsage;
+                res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
+                return res;
+            }
+        }
+        else {
+            this.logLine();
+            this.log("Heuristic B is disabled. Skipping.");
         }
 
         // Heuristic C: map most promising array partially
-        this.logLine();
-        this.log("Applying Heuristic C: Partially mapping most promising array to BRAM");
-        const usedMemoryInC = this.applyHeuristicPartialMapping(clusterFun, currentMemUsage, totalBytes, options.partialMappingMaxFactor);
-        currentMemUsage += usedMemoryInC;
+        if (options.disableC == undefined || !options.disableC) {
+            this.logLine();
+            this.log("Applying Heuristic C: Partially mapping most promising array to BRAM");
+            const usedMemoryInC = this.applyHeuristicPartialMapping(clusterFun, currentMemUsage, totalBytes, options.partialMappingMaxFactor);
+            currentMemUsage += usedMemoryInC;
 
-        res.mappedByC = usedMemoryInC > 0 ? 1 : 0;
-        res.sizeMappedByC = usedMemoryInC;
+            res.mappedByC = usedMemoryInC > 0 ? 1 : 0;
+            res.sizeMappedByC = usedMemoryInC;
+        }
+        else {
+            this.logLine();
+            this.log("Heuristic C is disabled. Skipping.");
+        }
 
         res.finalMemoryUsage = currentMemUsage;
         res.finalMemoryPercent = (currentMemUsage * 100) / totalBytes;
