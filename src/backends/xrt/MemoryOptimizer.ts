@@ -163,16 +163,27 @@ export class MemoryOptimizer extends AdvancedTransform {
         let mostPromisingIndex = -1;
         let mostAccesses = -1;
         let arraySize = 0;
+        let aliases: Set<string> = new Set();
+
         for (let i = 0; i < clusterFun.params.length; i++) {
             const param = clusterFun.params[i];
             const [valid, size] = this.isValidLiveIn(clusterFun, param.name);
             const hasAlreadyBeenMapped = Query.searchFrom(clusterFun.body, Vardecl, { name: `local_${param.name}` }).get()[0] != null;
-            if (param.name.startsWith("memregion_") || param.name.startsWith("rtr_val") || !param.type.isPointer || !valid || hasAlreadyBeenMapped) {
+
+            const isMemRegion = param.name.startsWith("memregion_");
+            const isRtrVal = param.name.startsWith("rtr_val");
+            const isPointer = param.type.isPointer;
+
+            const baseType = isPointer ? (param.type as PointerType).pointee : param.type;
+            const baseTypeSize = LightStructFlattener.getSizeOfBuiltinType(baseType);
+            const isScalar = size == baseTypeSize;
+
+            if (isMemRegion || isRtrVal || !isPointer || !valid || hasAlreadyBeenMapped || isScalar) {
                 continue;
             }
             //this.log(`Analyzing parameter ${param.name} for partial mapping:`);
-            const [reads, writes, uniqueReads, uniqueWrites] = this.getParamReadCount(clusterFun, param.name);
-            this.log(`  Parameter ${param.name}: ${reads} (${uniqueReads}) reads, ${writes} (${uniqueWrites}) writes`);
+            const [reads, writes, uniqueReads, uniqueWrites, paramAliases] = this.getParamReadCount(clusterFun, param.name);
+            this.log(`  Parameter ${param.name}: ${reads} (${uniqueReads}) reads, ${writes} (${uniqueWrites}) writes, ${size} bytes, ${paramAliases.size} aliases`);
             const readWrites = reads + writes;
 
             if (readWrites > mostAccesses) {
@@ -180,7 +191,8 @@ export class MemoryOptimizer extends AdvancedTransform {
                     mostAccesses = reads + writes;
                     mostPromisingIndex = i;
                     arraySize = size;
-                    this.log(`  Parameter ${param.name} is currently the most promising for partial mapping.`);
+                    aliases = paramAliases;
+                    this.log(`  Parameter ${param.name} is currently the most promising for partial mapping`);
                 }
                 else {
                     this.log(`  Parameter ${param.name} cannot be partially mapped: would exceed total memory limit.`);
@@ -206,12 +218,12 @@ export class MemoryOptimizer extends AdvancedTransform {
             const actualFactor = Math.ceil(arraySize / remainingMemory);
             usedMemory = Math.floor(arraySize / actualFactor);
             this.log(`  Partially mapping parameter ${chosenParam.name} to use ${usedMemory} bytes (factor ${actualFactor}).`);
-            this.partiallyMapArray(clusterFun, mostPromisingIndex, arraySize, actualFactor);
+            this.partiallyMapArray(clusterFun, mostPromisingIndex, arraySize, actualFactor, aliases);
         }
         return usedMemory;
     }
 
-    private partiallyMapArray(clusterFun: FunctionJp, paramIndex: number, size: number, factor: number): void {
+    private partiallyMapArray(clusterFun: FunctionJp, paramIndex: number, size: number, factor: number, aliases: Set<string>): void {
         const newStatements = [];
 
         const param = clusterFun.params[paramIndex];
@@ -271,7 +283,7 @@ export class MemoryOptimizer extends AdvancedTransform {
             clusterFun.body.insertBegin(stmt);
         }
 
-        for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: param.name })) {
+        for (const ref of Query.searchFrom(clusterFun.body, Varref, (r) => r.name === param.name || aliases.has(r.name))) {
             if (ref.parent instanceof ArrayAccess) {
                 const arrAccess = ref.parent as ArrayAccess;
                 const indexExpr = arrAccess.subscript[0];
@@ -307,12 +319,36 @@ export class MemoryOptimizer extends AdvancedTransform {
         }
     }
 
-    private getParamReadCount(clusterFun: FunctionJp, paramName: string): [number, number, number, number] {
+    private getAliases(clusterFun: FunctionJp, paramName: string): Set<string> {
+        const aliases: Set<string> = new Set();
+
+        for (const ref of Query.searchFrom(clusterFun.body, Varref, { name: paramName })) {
+            if (ref.parent instanceof BinaryOp && ref.parent.operator === "=") {
+                if (ref.parent.left instanceof Varref && ref.parent.left.name !== paramName) {
+                    const aliasName = ref.parent.left.name;
+                    aliases.add(aliasName);
+                }
+            }
+        }
+        const allAliases: Set<string> = new Set(aliases);
+        for (const alias of aliases) {
+            const childAliases = this.getAliases(clusterFun, alias);
+            for (const childAlias of childAliases) {
+                allAliases.add(childAlias);
+            }
+        }
+        return allAliases;
+    }
+
+    private getParamReadCount(clusterFun: FunctionJp, paramName: string): [number, number, number, number, Set<string>] {
         let reads = 0;
         let writes = 0;
         let uniqueReads = 0;
         let uniqueWrites = 0;
-        for (const varref of Query.searchFrom(clusterFun.body, Varref, { name: paramName })) {
+        const aliases = this.getAliases(clusterFun, paramName);
+        this.log(`  Found ${aliases.size} alias(es) for parameter ${paramName}: ${[...aliases].join(", ")}`);
+
+        for (const varref of Query.searchFrom(clusterFun.body, Varref, (r) => r.name === paramName || aliases.has(r.name))) {
             const arrayAccess = varref.getAncestor("arrayAccess") as ArrayAccess | null;
             if (arrayAccess != null) {
                 const stmt = arrayAccess.getAncestor("statement") as Statement | null;
@@ -339,7 +375,7 @@ export class MemoryOptimizer extends AdvancedTransform {
             }
         }
         //this.log(`    Total unique reads: ${uniqueReads}, unique writes: ${uniqueWrites}`);
-        return [reads, writes, uniqueReads, uniqueWrites];
+        return [reads, writes, uniqueReads, uniqueWrites, aliases];
     }
 
     private estimateAccesses(arrayAccess: ArrayAccess): number {
